@@ -1,24 +1,19 @@
 namespace CellularSwarm.Core
 {
-    public class CellGrid
-    {
-
-    }
-
     public struct HexCoords
     {
-        public int x;
-        public int y;
+        public int q;
+        public int r;
 
-        public HexCoords(int x, int y)
+        public HexCoords(int q, int r)
         {
-            this.x = x;
-            this.y = y;
+            this.q = q;
+            this.r = r;
         }
 
         public static HexCoords operator +(HexCoords a, HexCoords b)
         {
-            return new HexCoords(a.x + b.x, a.y + b.y);
+            return new HexCoords(a.q + b.q, a.r + b.r);
         }
     }
 }

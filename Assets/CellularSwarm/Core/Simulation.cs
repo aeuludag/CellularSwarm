@@ -7,7 +7,11 @@ namespace CellularSwarm.Core
         public int id;
         public string name;
 
-        public CellGrid cellGrid;
-        public List<Cell> cells;
+        public Dictionary<HexCoords, Cell> cells;
+        
+        //public Dictionary<HexCoords, Cell> Step(Dictionary<HexCoords, Cell> cellGrid)
+        //{
+
+        //}
     }
 }

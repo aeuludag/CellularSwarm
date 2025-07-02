@@ -7,84 +7,70 @@ namespace CellularSwarm.Core
         public int id;
         public string name;
 
-        public GeneAction action;
+        public List<GeneAction> actions;
         public List<GeneCondition> activitorConditions;
         public List<GeneCondition> inhibitorConditions;
 
-        public Gene(int id, GeneAction action, List<GeneCondition> activitorConditions, List<GeneCondition> inhibitorConditions)
+        public Gene(int id, List<GeneAction> actions, List<GeneCondition> activitorConditions, List<GeneCondition> inhibitorConditions)
         {
             this.id = id;
-            this.action = action;
+            this.actions = actions;
             this.activitorConditions = activitorConditions;
             this.inhibitorConditions = inhibitorConditions;
         }
 
-        public bool ShouldBeActive(List<Morphogen> morphogens, List<int> concentrations)
+        public bool ShouldBeActive(Cell cell)
         {
-            bool necessaryConditionsMet = false;
+            // TODO: Write Unit Tests for this.
 
-            foreach (GeneCondition condition in inhibitorConditions)
+            if(NecessaryConditionsMet(inhibitorConditions, cell)) { return false; }
+            if(NecessaryConditionsMet(activitorConditions, cell)) { return true; }
+            return false;
+        }
+
+        public bool NecessaryConditionsMet(List<GeneCondition> conditions, Cell cell)
+        {
+            bool weakConditionsMet = false;
+            bool weakConditionExists = false;
+            bool strongConditionsMet = true;
+            bool strongConditionExists = false;
+
+            foreach (GeneCondition condition in conditions)
             {
-                Morphogen conditionMorphogen = condition.morphogen;
-
-                if (morphogens.Contains(conditionMorphogen))
+                if (condition.strong)
                 {
-                    int concentration = concentrations[morphogens.IndexOf(conditionMorphogen)];
-
-                    if (condition.strong)
-                    {
-                        necessaryConditionsMet &= condition.IsMet(concentration);
-                        if (necessaryConditionsMet) { return false; }
-                    }
-                    else
-                    {
-                        necessaryConditionsMet |= condition.IsMet(concentration);
-                    }
+                    strongConditionExists = true;
+                    strongConditionsMet &= condition.IsMet(cell);
+                }
+                else
+                {
+                    weakConditionExists = true;
+                    weakConditionsMet |= condition.IsMet(cell);
                 }
             }
+            
+            bool strongs = !strongConditionExists || strongConditionsMet; // only false when StrongConditionExists and its not met (p -> q)
+            bool weaks = !weakConditionExists || weakConditionsMet; // only false when WeakConditionExists and its not met (p -> q)
 
-            if (necessaryConditionsMet) { return false; }
-
-            foreach (GeneCondition condition in activitorConditions)
-            {
-                Morphogen conditionMorphogen = condition.morphogen;
-
-                if (morphogens.Contains(conditionMorphogen))
-                {
-                    int concentration = concentrations[morphogens.IndexOf(conditionMorphogen)];
-
-                    if (condition.strong)
-                    {
-                        necessaryConditionsMet &= condition.IsMet(concentration);
-                        if (!necessaryConditionsMet) { return false; }
-                    }
-                    else
-                    {
-                        necessaryConditionsMet |= condition.IsMet(concentration);
-                    }
-                }
-            }
-
-            return necessaryConditionsMet;
+            return strongs && weaks;
         }
     }
 
-    public class GeneCondition
+    public abstract class GeneCondition
     {
         public int id;
-        public string name;
+        public bool strong; // All strong conditions and at least one weak condition must be met.
 
+        public abstract bool IsMet(Cell cell);
+    }
+
+    public class ConcentrationCondition : GeneCondition
+    {
         public Morphogen morphogen;
         public int thresholdConcentration;
         public ComparisonType comparisonType;
-        public bool strong;
-        // When a cell has multiple conditions, strong conditions must be all met (& operator) whereas weak conditions need only one of them to be met (| op.).
-        // If all conditions are weak, only one of them is enough to activate/inhibit the gene.
-        // If all conditions are strong, all of them must be met to activate/inhibit the gene.
-        // My naming may be confusing, but I mean strong as in "a must" to continue and not as in "can satisfy the need on its own".
-        // I'll probably get confuse myself too.
 
-        public GeneCondition(int id, Morphogen morphogen, int thresholdConcentration, ComparisonType comparisonType)
+        public ConcentrationCondition(int id, Morphogen morphogen, int thresholdConcentration, ComparisonType comparisonType)
         {
             this.id = id;
             this.morphogen = morphogen;
@@ -92,8 +78,10 @@ namespace CellularSwarm.Core
             this.comparisonType = comparisonType;
         }
 
-        public bool IsMet(int concentration)
+        public override bool IsMet(Cell cell)
         {
+            int concentration = cell.cellularContent.GetValueOrDefault(morphogen, 0);
+
             switch (comparisonType)
             {
                 case ComparisonType.GreaterThan:
@@ -111,24 +99,41 @@ namespace CellularSwarm.Core
         }
     }
 
+    public class CellTypeCondition : GeneCondition
+    {
+        public CellType cellType;
+        public bool not;
+
+        public CellTypeCondition(int id, CellType cellType, bool not)
+        {
+            this.cellType = cellType;
+            this.not = not;
+        }
+
+        public override bool IsMet(Cell cell)
+        {
+            return not ? (cell.cellType != cellType) : (cell.cellType == cellType);
+        }
+    }
+
     public class GeneAction
     {
         public int id;
         public ActionType actionType;
-        public List<MorphogenConcentrationPair> actionMorphogens;
+        public Dictionary<Morphogen, int> actionMorphogens;
 
         public GeneAction(int id, ActionType actionType)
         {
             this.id = id;
             this.actionType = actionType;
 
-            if (actionType == ActionType.ReleaseMorphogen || actionType == ActionType.RemoveMorphogen)
+            if (actionType == ActionType.ChangeMorphogen)
             {
-                throw new System.Exception("Morphogen list is not specified in Release or Remove Morphogen events.");
+                throw new System.Exception("Morphogen list is not specified in Change Morphogen actions.");
             }
         }
 
-        public GeneAction(int id, ActionType actionType, List<MorphogenConcentrationPair> actionMorphogens)
+        public GeneAction(int id, ActionType actionType, Dictionary<Morphogen, int> actionMorphogens)
         {
             this.id = id;
             this.actionType = actionType;
@@ -137,11 +142,9 @@ namespace CellularSwarm.Core
 
         public enum ActionType
         {
-            ReleaseMorphogen,
-            RemoveMorphogen,
+            ChangeMorphogen,
             Apoptosis,
-            Reproduce,
-
+            Multiply,
         }
     }
 }

@@ -1,47 +1,23 @@
-﻿using System.Collections.Generic;
-
-namespace CellularSwarm.Core
+﻿namespace CellularSwarm.Core
 {
     public struct Morphogen
     {
         public int id;
         public string name;
+        public float diffusionFactor;
 
-        public Morphogen(int id, string name)
+        public Morphogen(int id, string name, float diffusionFactor)
         {
             this.id = id;
             this.name = name;
-        }
-    }
-
-    public struct MorphogenConcentrationPair 
-    {
-        public Morphogen morphogen;
-        public int concentration;
-
-        public MorphogenConcentrationPair(Morphogen morphogen, int concentration)
-        {
-            this.morphogen = morphogen;
-            this.concentration = concentration >= 0 ? concentration : 0;
-        }
-        public MorphogenConcentrationPair Decay()
-        {
-            return new MorphogenConcentrationPair(this.morphogen, this.concentration - 1);
+            this.diffusionFactor = diffusionFactor;
         }
 
-        public static (List<Morphogen>, List<int>) PairToLists(List<MorphogenConcentrationPair> pairs)
-        {
-            List<Morphogen> morphogens = new();
-            List<int> concentrations = new();
+        public bool Equals(Morphogen other) => other.id == id;
+        public override bool Equals(object obj) => obj is Morphogen other && (other.id == id);
+        public override int GetHashCode() => id;
 
-            foreach (var pair in pairs)
-            {
-                morphogens.Add(pair.morphogen);
-                concentrations.Add(pair.concentration);
-            }
-
-            return (morphogens, concentrations);
-        }
-
+        public static bool operator ==(Morphogen left, Morphogen right) => left.Equals(right);
+        public static bool operator !=(Morphogen left, Morphogen right) => !left.Equals(right);
     }
 }
