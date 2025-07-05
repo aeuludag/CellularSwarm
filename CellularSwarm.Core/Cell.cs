@@ -4,11 +4,19 @@ namespace CellularSwarm.Core
 {
     public class Cell
     {
+        public Simulation simulation;
         public CellType cellType;
         public List<Gene> genes;
         public Dictionary<Morphogen, int> cellularContent;
 
         public int neighbourCount;
+
+        public Cell(CellType type, List<Gene> genes, Dictionary<Morphogen, int> cellularContent)
+        {
+            this.cellType = type;
+            this.genes = genes;
+            this.cellularContent = cellularContent;
+        }
 
         public List<GeneAction> GetAvailableActions()
         {

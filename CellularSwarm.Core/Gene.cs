@@ -28,12 +28,14 @@ namespace CellularSwarm.Core
             return false;
         }
 
-        public bool NecessaryConditionsMet(List<GeneCondition> conditions, Cell cell)
+        public static bool NecessaryConditionsMet(List<GeneCondition> conditions, Cell cell)
         {
             bool weakConditionsMet = false;
             bool weakConditionExists = false;
             bool strongConditionsMet = true;
             bool strongConditionExists = false;
+
+            if(conditions.Count == 0) { return false; }
 
             foreach (GeneCondition condition in conditions)
             {
