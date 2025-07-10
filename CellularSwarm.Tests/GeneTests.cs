@@ -23,14 +23,14 @@ public class GeneTests
         var Multiplogen = new Morphogen(1, "Multiplogen", 1);
         var Unmultiplogen = new Morphogen(2, "Unmultiplogen", 1);
 
-        Dictionary<Morphogen, int> Content = new(){
-            { A, 1 },
-            { Multiplogen, current },
-            { Unmultiplogen, 20 },
+        Dictionary<int, int> Content = new(){
+            { A.id, 1 },
+            { Multiplogen.id, current },
+            { Unmultiplogen.id, 20 },
             };
 
         var MultiplyAction = new GeneAction(0, GeneAction.ActionType.Multiply);
-        var MultiplogenCondition = new ConcentrationCondition(0, Multiplogen, threshold, ConcentrationCondition.ComparisonType.GreaterThan);
+        var MultiplogenCondition = new ConcentrationCondition(0, false, Multiplogen.id, threshold, ConcentrationCondition.ComparisonType.GreaterThan);
 
         Gene GENE_0 = new Gene(
             0,
