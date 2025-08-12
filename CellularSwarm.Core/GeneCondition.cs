@@ -3,6 +3,7 @@
 public abstract class GeneCondition
 {
     public int id;
+    public string name = string.Empty;
     public bool strong; // All strong conditions and at least one weak condition must be met.
     public bool not;
 
@@ -19,10 +20,10 @@ public abstract class GeneCondition
 public class ConcentrationCondition : GeneCondition
 {
     public int morphogenID;
-    public int thresholdConcentration;
+    public float thresholdConcentration;
     public ComparisonType comparisonType;
 
-    public ConcentrationCondition(int id, bool not, int morphogenID, int thresholdConcentration, ComparisonType comparisonType)
+    public ConcentrationCondition(int id, bool not, int morphogenID, float thresholdConcentration, ComparisonType comparisonType)
     {
         this.id = id;
         this.not = not;
@@ -33,7 +34,7 @@ public class ConcentrationCondition : GeneCondition
 
     public override bool IsMet(Cell cell)
     {
-        int concentration = cell.cellularContent.GetValueOrDefault(morphogenID, 0);
+        float concentration = cell.GetMorphogen(morphogenID);
 
         switch (comparisonType)
         {
@@ -62,7 +63,7 @@ public class CellTypeCondition : GeneCondition
 
     public override bool IsMet(Cell cell)
     {
-        return (cell.cellType == cellType);
+        return cell.cellType == cellType;
     }
 }
 

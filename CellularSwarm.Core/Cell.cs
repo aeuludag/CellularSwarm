@@ -4,16 +4,33 @@ public class Cell
 {
     public Simulation simulation;
     public CellType cellType;
-    public List<Gene> genes;
-    public Dictionary<int, int> cellularContent;
+    public List<Gene> genes = new();
+    private Dictionary<int, float> _morphogens = new();
+    public Dictionary<int, float> Morphogens
+    {
+        get => _morphogens;
+    }
+    public int neighbourCount = 0;
 
-    public int neighbourCount; // set only by simulation each step, idk how to implement protections yet
-
-    public Cell(CellType type, List<Gene> genes, Dictionary<int, int> cellularContent)
+    public Cell(Simulation simulation, CellType type, List<Gene> genes, Dictionary<int, float> morphogens)
     {
         this.cellType = type;
         this.genes = genes;
-        this.cellularContent = cellularContent;
+        this._morphogens = morphogens;
+        this.simulation = simulation;
+    }
+
+    public Cell(Simulation simulation, int cellTypeID, List<int> geneIDs)
+    {
+        this.cellType = simulation.CellTypes[cellTypeID];
+        this.genes = geneIDs.Select(id => simulation.Genes[id]).ToList();
+        this.simulation = simulation;
+    }
+
+    public Cell(Simulation simulation)
+    {
+        this.simulation = simulation;
+        this.cellType = simulation.CellTypes[0];
     }
 
     public List<GeneAction> GetAvailableActions()
@@ -50,15 +67,20 @@ public class Cell
         }
     }
 
-    public void AddMorphogen(int id, int concentration)
+    public void AddMorphogen(int id, float concentration)
     {
-        SetMorphogen(id, cellularContent.GetValueOrDefault(id, 0) + concentration);
+        SetMorphogen(id, _morphogens.GetValueOrDefault(id, 0) + concentration);
     }
 
-    public void SetMorphogen(int id, int concentration)
+    public void SetMorphogen(int id, float concentration)
     {
         if(concentration <= 0) concentration = 0;
-        cellularContent[id] = concentration;
+        _morphogens[id] = concentration;
+    }
+
+    public float GetMorphogen(int id)
+    {
+        return _morphogens.GetValueOrDefault(id, 0);
     }
 
     public void Apoptosis()
@@ -85,6 +107,6 @@ public struct CellType
     public static bool operator ==(CellType left, CellType right) => left.Equals(right);
     public static bool operator !=(CellType left, CellType right) => !left.Equals(right);
     public bool Equals(CellType other) => other.id == id;
-    public override bool Equals(object obj) => obj is CellType other && (other.id == id);
+    public override bool Equals(object? obj) => obj is CellType other && (other.id == id);
     public override int GetHashCode() => id;
 }

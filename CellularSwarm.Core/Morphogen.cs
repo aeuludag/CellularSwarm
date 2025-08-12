@@ -14,7 +14,7 @@ public class Morphogen
     }
 
     public bool Equals(Morphogen other) => other.id == id;
-    public override bool Equals(object obj) => obj is Morphogen other && (other.id == id);
+    public override bool Equals(object? obj) => obj is Morphogen other && (other.id == id);
     public override int GetHashCode() => id;
 
     public static bool operator ==(Morphogen left, Morphogen right) => left.Equals(right);
