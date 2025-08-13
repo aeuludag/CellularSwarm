@@ -36,6 +36,15 @@ public class SerializerTests
             inhibitorConditions: new List<GeneCondition> { simulation.GeneConditions[1] }
         ));
 
+        var cell = new Cell(simulation);
+
+        cell.AddMorphogen(0, 10f);
+        cell.AddMorphogen(1, 15f);
+
+        cell.genes.Add(simulation.Genes[0]);
+
+        simulation.cells.Add(new HexCoords(0, 0), cell);
+
         using (var writer = new StringWriter())
         {
             var simulationData = SimulationData.FromSimulation(simulation);
@@ -53,7 +62,7 @@ public class SerializerTests
         {
             id = 1,
             name = "Test Simulation",
-            cells = new Dictionary<HexCoords, CellData>(),
+            cells = new Dictionary<string, CellData>(),
             cellTypes = new Dictionary<int, CellTypeData>(),
             morphogens = new Dictionary<int, MorphogenData>(),
             geneActions = new Dictionary<int, GeneActionData>(),
@@ -103,5 +112,19 @@ public class SerializerTests
         Assert.Equal(originalData.geneActions.Count, newSimulation.GeneActions.Count);
         Assert.Equal(originalData.geneConditions.Count, newSimulation.GeneConditions.Count);
         Assert.Equal(originalData.genes.Count, newSimulation.Genes.Count);
+    }
+
+    [Theory]
+    [InlineData("(0, 0)", 0, 0)]
+    [InlineData("(1, -1)", 1, -1)]
+    [InlineData("(-1, 1)", -1, 1)]
+    public void HexCoords_ShouldConvertFine(string expected, int q, int r)
+    {
+        // Arrange
+        var coords = new HexCoords(q, r);
+        var expectedCoords = coords.ToString();
+
+        Assert.Equal(expected, expectedCoords);
+        Assert.Equal(coords, HexCoords.FromString(expected));
     }
 }

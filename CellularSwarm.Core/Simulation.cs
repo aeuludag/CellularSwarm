@@ -12,10 +12,14 @@ public class Simulation
     public Dictionary<int, GeneCondition> GeneConditions = new();
     public Dictionary<int, Gene> Genes = new();
 
+    public readonly DiffusionHandler Diffuser;
+
     public Simulation(int id, string name)
     {
         this.id = id;
         this.name = name;
+
+        Diffuser = new DiffusionHandler(this);
     }
 
 
@@ -29,9 +33,10 @@ public class Simulation
         }
         return neighbours;
     }
-    
-    //public Dictionary<HexCoords, Cell> Step(Dictionary<HexCoords, Cell> cellGrid) Step
-    //{
 
-    //}
+    public Dictionary<HexCoords, Cell> Step()
+    {
+        Diffuser.Diffuse();
+        return cells;
+    }
 }

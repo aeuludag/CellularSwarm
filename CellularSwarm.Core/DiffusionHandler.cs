@@ -9,19 +9,26 @@ public class DiffusionHandler
     // The trading will occur when a certain difference threshold is reached.
     // Then it will share its morphogens with its neighbours proportional to the difference in concentration and the diffusion factor.
 
-    public static float DiffusionThreshold { get; set; } = 10f;
+    public float DiffusionThreshold { get; set; } = 0.1f;
 
-    public static void Diffuse(Simulation simulation)
+    public Simulation Simulation { get; }
+
+    public DiffusionHandler(Simulation simulation)
+    {
+        this.Simulation = simulation;
+    }
+
+    public void Diffuse()
     {
         var morphogenDelta = new Dictionary<HexCoords, Dictionary<int, float>>();
 
-        foreach (var cellPair in simulation.cells)
+        foreach (var cellPair in Simulation.cells)
         {
             var coords = cellPair.Key;
             var cell = cellPair.Value;
             var morphogens = cell.Morphogens;
 
-            var neighbours = simulation.GetNeighbours(coords);
+            var neighbours = Simulation.GetNeighbours(coords);
 
             foreach (var morphogenPair in morphogens)
             {
@@ -32,7 +39,7 @@ public class DiffusionHandler
 
                 foreach (var neighbourCoords in neighbours)
                 {
-                    var neighbour = simulation.cells[neighbourCoords];
+                    var neighbour = Simulation.cells[neighbourCoords];
 
                     var diff = morphogenConcentration - neighbour.GetMorphogen(morphogenId);
 
@@ -40,18 +47,48 @@ public class DiffusionHandler
 
                     neighboursToShare++;
 
-                    var rawShareAmount = diff * simulation.Morphogens[morphogenId].diffusionFactor;
+                    var rawShareAmount = diff * Simulation.Morphogens[morphogenId].diffusionFactor;
                     tempMorphogenDelta[neighbourCoords] = rawShareAmount;
                 }
 
                 if (neighboursToShare > 0)
                 {
-                    var totalShareAmount = tempMorphogenDelta.Values.Sum();
+                    var totalShareAmount = 0f;
                     foreach (var neighbourCoords in tempMorphogenDelta.Keys)
                     {
                         var shareAmount = tempMorphogenDelta[neighbourCoords] / (neighboursToShare + 1);
-                        morphogenDelta[neighbourCoords][morphogenId] = shareAmount;
-                        morphogenDelta[coords][morphogenId] = -shareAmount;
+
+                        totalShareAmount += shareAmount;
+
+                        if (morphogenDelta.ContainsKey(neighbourCoords))
+                        {
+                            if (!morphogenDelta[neighbourCoords].TryAdd(morphogenId, shareAmount))
+                            {
+                                morphogenDelta[neighbourCoords][morphogenId] += shareAmount;
+                            }
+                        }
+                        else
+                        {
+                            morphogenDelta.Add(neighbourCoords, new Dictionary<int, float>());
+                            morphogenDelta[neighbourCoords].Add(morphogenId, shareAmount);
+                        }
+                    }
+
+                    if (morphogenDelta.ContainsKey(coords))
+                    {
+                        if (morphogenDelta[coords].ContainsKey(morphogenId))
+                        {
+                            morphogenDelta[coords][morphogenId] -= totalShareAmount;
+                        }
+                        else
+                        {
+                            morphogenDelta[coords].Add(morphogenId, -totalShareAmount);
+                        }
+                    }
+                    else
+                    {
+                        morphogenDelta.Add(coords, new Dictionary<int, float>());
+                        morphogenDelta[coords].Add(morphogenId, -totalShareAmount);
                     }
                 }
             }
@@ -67,7 +104,7 @@ public class DiffusionHandler
                 var morphogenId = deltaPair.Key;
                 var delta = deltaPair.Value;
 
-                simulation.cells[coords].SetMorphogen(morphogenId, simulation.cells[coords].GetMorphogen(morphogenId) + delta);
+                Simulation.cells[coords].SetMorphogen(morphogenId, Simulation.cells[coords].GetMorphogen(morphogenId) + delta);
             }
         }
     }

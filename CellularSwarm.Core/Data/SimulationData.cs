@@ -4,7 +4,7 @@ public class SimulationData
 {
     public int id;
     public string name = string.Empty;
-    public Dictionary<HexCoords, CellData> cells = new();
+    public Dictionary<string, CellData> cells = new();
     public Dictionary<int, CellTypeData> cellTypes = new();
     public Dictionary<int, MorphogenData> morphogens = new();
     public Dictionary<int, GeneActionData> geneActions = new();
@@ -17,7 +17,7 @@ public class SimulationData
         {
             id = simulation.id,
             name = simulation.name,
-            cells = simulation.cells.ToDictionary(c => c.Key, c => CellData.FromCell(c.Value)),
+            cells = simulation.cells.ToDictionary(c => c.Key.ToString(), c => CellData.FromCell(c.Value)),
             cellTypes = simulation.CellTypes.ToDictionary(c => c.Key, c => CellTypeData.FromCellType(c.Value)),
             morphogens = simulation.Morphogens.ToDictionary(m => m.Key, m => MorphogenData.FromMorphogen(m.Value)),
             geneActions = simulation.GeneActions.ToDictionary(a => a.Key, a => GeneActionData.FromGeneAction(a.Value)),
@@ -38,7 +38,7 @@ public class SimulationData
         simulation.GeneConditions = data.geneConditions.ToDictionary(c => c.Key, c => GeneConditionData.ToGeneCondition(simulation, c.Value));
         simulation.Genes = data.genes.ToDictionary(g => g.Key, g => GeneData.ToGene(simulation, g.Value));
 
-        simulation.cells = data.cells.ToDictionary(c => c.Key, c => CellData.ToCell(simulation, c.Value));
+        simulation.cells = data.cells.ToDictionary(c => HexCoords.FromString(c.Key), c => CellData.ToCell(simulation, c.Value));
 
         return simulation;
     }

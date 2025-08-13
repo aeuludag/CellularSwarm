@@ -129,8 +129,9 @@ GameObject:
   m_Component:
   - component: {fileID: 517008935}
   - component: {fileID: 517008934}
+  - component: {fileID: 517008936}
   m_Layer: 0
-  m_Name: HexGridRenderer
+  m_Name: Visualizer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -149,7 +150,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hexPrefab: {fileID: 4590575860772928128, guid: f3befa3478f1a4aefa737ebca0258f7b, type: 3}
-  radius: 2
   hexSize: 1
 --- !u!4 &517008935
 Transform:
@@ -166,6 +166,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &517008936
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 517008933}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0892d56fd24b946d38cd4183fa48241c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hexGridRenderer: {fileID: 517008934}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -202,7 +215,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_BackGroundColor: {r: 0.34609553, g: 0.19215688, b: 0.4745098, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
