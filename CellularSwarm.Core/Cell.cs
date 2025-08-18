@@ -124,6 +124,7 @@ public class Cell
         foreach (var morphogenPair in _morphogens)
         {
             newMorphogens[morphogenPair.Key] = morphogenPair.Value * morphogenShare.GetValueOrDefault(morphogenPair.Key, 0.5f);
+            _morphogens[morphogenPair.Key] *= 1 - morphogenShare.GetValueOrDefault(morphogenPair.Key, 0.5f);
         }
 
         return new Cell(simulation, cellType, genes, newMorphogens);
