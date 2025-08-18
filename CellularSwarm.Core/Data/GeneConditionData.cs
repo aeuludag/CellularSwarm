@@ -8,11 +8,11 @@ public class GeneConditionData
     public int conditionType; // 0: Concentration, 1: CellType, 2: Neighbour
 
     // Concentration
-    public int morphogenID;
+    public int morphogenId;
     public float thresholdConcentration;
 
     // CellType
-    public int cellTypeID;
+    public int cellTypeId;
 
     // Neighbour
     public int neighbourThreshold;
@@ -30,14 +30,14 @@ public class GeneConditionData
         if (condition is ConcentrationCondition concentrationCondition)
         {
             data.conditionType = 0;
-            data.morphogenID = concentrationCondition.morphogenID;
+            data.morphogenId = concentrationCondition.morphogenID;
             data.thresholdConcentration = concentrationCondition.thresholdConcentration;
             data.comparisonType = (int)concentrationCondition.comparisonType;
         }
         else if (condition is CellTypeCondition cellTypeCondition)
         {
             data.conditionType = 1;
-            data.cellTypeID = cellTypeCondition.cellType.id;
+            data.cellTypeId = cellTypeCondition.cellType.id;
         }
         else if (condition is NeighbourCondition neighbourCondition)
         {
@@ -56,14 +56,14 @@ public class GeneConditionData
             0 => new ConcentrationCondition(
                 id: data.id,
                 not: data.not,
-                morphogenID: data.morphogenID,
+                morphogenID: data.morphogenId,
                 thresholdConcentration: data.thresholdConcentration,
                 comparisonType: (GeneCondition.ComparisonType)data.comparisonType
             ),
             1 => new CellTypeCondition(
                 id: data.id,
                 not: data.not,
-                cellType: simulation.CellTypes[data.cellTypeID]
+                cellType: simulation.CellTypes[data.cellTypeId]
             ),
             2 => new NeighbourCondition(
                 id: data.id,

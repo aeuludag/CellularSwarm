@@ -10,6 +10,8 @@ public class SimulationData
     public Dictionary<int, GeneActionData> geneActions = new();
     public Dictionary<int, GeneConditionData> geneConditions = new();
     public Dictionary<int, GeneData> genes = new();
+    public float diffusionThreshold;
+    public float diffusionFactor;
 
     public static SimulationData FromSimulation(Simulation simulation)
     {
@@ -23,6 +25,8 @@ public class SimulationData
             geneActions = simulation.GeneActions.ToDictionary(a => a.Key, a => GeneActionData.FromGeneAction(a.Value)),
             geneConditions = simulation.GeneConditions.ToDictionary(c => c.Key, c => GeneConditionData.FromGeneCondition(c.Value)),
             genes = simulation.Genes.ToDictionary(g => g.Key, g => GeneData.FromGene(g.Value)),
+            diffusionFactor = simulation.diffusionFactor,
+            diffusionThreshold = simulation.diffusionThreshold,
         };
     }
 
@@ -39,6 +43,9 @@ public class SimulationData
         simulation.Genes = data.genes.ToDictionary(g => g.Key, g => GeneData.ToGene(simulation, g.Value));
 
         simulation.cells = data.cells.ToDictionary(c => HexCoords.FromString(c.Key), c => CellData.ToCell(simulation, c.Value));
+
+        simulation.diffusionFactor = data.diffusionFactor;
+        simulation.diffusionThreshold = data.diffusionThreshold;
 
         return simulation;
     }

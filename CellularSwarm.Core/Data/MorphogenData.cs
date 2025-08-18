@@ -5,6 +5,7 @@ public class MorphogenData
     public int id;
     public string name = string.Empty;
     public float diffusionFactor;
+    public float decayFactor;
 
     public static MorphogenData FromMorphogen(Morphogen morphogen)
     {
@@ -12,12 +13,13 @@ public class MorphogenData
         {
             id = morphogen.id,
             name = morphogen.name,
-            diffusionFactor = morphogen.diffusionFactor
+            diffusionFactor = morphogen.diffusionFactor,
+            decayFactor = morphogen.decayFactor
         };
     }
 
     public static Morphogen ToMorphogen(MorphogenData data)
     {
-        return new Morphogen(data.id, data.name, data.diffusionFactor);
+        return new Morphogen(data.id, data.name, data.diffusionFactor, data.decayFactor);
     }
 }

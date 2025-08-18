@@ -4,7 +4,7 @@ public class GeneActionData
 {
     public int id;
     public int actionType;
-    public Dictionary<int, int> actionMorphogens = new();
+    public Dictionary<int, float> actionMorphogens = new();
 
     public static GeneActionData FromGeneAction(GeneAction action)
     {
@@ -12,7 +12,7 @@ public class GeneActionData
         {
             id = action.id,
             actionType = (int)action.actionType,
-            actionMorphogens = new Dictionary<int, int>(action.actionMorphogens)
+            actionMorphogens = new Dictionary<int, float>(action.actionMorphogens)
         };
     }
 

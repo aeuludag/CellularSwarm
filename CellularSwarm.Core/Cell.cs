@@ -11,6 +11,9 @@ public class Cell
         get => _morphogens;
     }
     public int neighbourCount = 0;
+    public bool shouldMultiply;
+    public bool shouldApoptosis;
+    private GeneAction? _currentMultiplyAction;
 
     public Cell(Simulation simulation, CellType type, List<Gene> genes, Dictionary<int, float> morphogens)
     {
@@ -31,6 +34,23 @@ public class Cell
     {
         this.simulation = simulation;
         this.cellType = simulation.CellTypes[0];
+    }
+
+    public Cell(Cell cell)
+    {
+        simulation = cell.simulation;
+        cellType = cell.cellType;
+        genes = new(cell.genes);
+        _morphogens = new(cell.Morphogens);
+    }
+
+    public void Step()
+    {
+        var actions = GetAvailableActions();
+        foreach (var action in actions)
+        {
+            PerformAction(action);
+        }
     }
 
     public List<GeneAction> GetAvailableActions()
@@ -58,11 +78,13 @@ public class Cell
                 break;
 
             case GeneAction.ActionType.Apoptosis:
-                Apoptosis();
+                shouldApoptosis = true;
                 break;
 
             case GeneAction.ActionType.Multiply:
-                Multiply();
+                if (neighbourCount == 6) break;
+                _currentMultiplyAction = action;
+                shouldMultiply = true;
                 break;
         }
     }
@@ -85,12 +107,26 @@ public class Cell
 
     public void Apoptosis()
     {
-
+        // ded xd
     }
 
-    public void Multiply()
+    public Cell Multiply()
     {
+        if (_currentMultiplyAction is null) throw new System.NullReferenceException("Current multiply action is null, which should be impossible!!");
+        if (!shouldMultiply) throw new System.Exception("Should NOT multiply now.");
 
+        Dictionary<int, float> morphogenShare = _currentMultiplyAction.actionMorphogens;
+
+        shouldMultiply = false;
+
+        Dictionary<int, float> newMorphogens = new();
+
+        foreach (var morphogenPair in _morphogens)
+        {
+            newMorphogens[morphogenPair.Key] = morphogenPair.Value * morphogenShare.GetValueOrDefault(morphogenPair.Key, 0.5f);
+        }
+
+        return new Cell(simulation, cellType, genes, newMorphogens);
     }
 }
 public struct CellType

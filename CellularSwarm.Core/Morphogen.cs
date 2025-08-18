@@ -5,12 +5,14 @@ public class Morphogen
     public int id;
     public string name;
     public float diffusionFactor;
+    public float decayFactor;
 
-    public Morphogen(int id, string name, float diffusionFactor)
+    public Morphogen(int id, string name, float diffusionFactor, float decayFactor)
     {
         this.id = id;
         this.name = name;
         this.diffusionFactor = diffusionFactor;
+        this.decayFactor = decayFactor;
     }
 
     public bool Equals(Morphogen other) => other.id == id;

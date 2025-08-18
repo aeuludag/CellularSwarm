@@ -18,9 +18,9 @@ public class GeneTests
         simulation.CellTypes.Add(1, new CellType(1, "Meat"));
         simulation.CellTypes.Add(2, new CellType(2, "Skin"));
 
-        simulation.Morphogens.Add(0, new Morphogen(0, "A", 0.9f));
-        simulation.Morphogens.Add(1, new Morphogen(1, "B", 0.8f));
-        simulation.Morphogens.Add(2, new Morphogen(2, "C", 0.7f));
+        simulation.Morphogens.Add(0, new Morphogen(0, "A", 0.9f, 0.1f));
+        simulation.Morphogens.Add(1, new Morphogen(1, "B", 0.8f, 0.1f));
+        simulation.Morphogens.Add(2, new Morphogen(2, "C", 0.7f, 0.1f));
 
         simulation.GeneActions.Add(0, new GeneAction(0, GeneAction.ActionType.Multiply));
 

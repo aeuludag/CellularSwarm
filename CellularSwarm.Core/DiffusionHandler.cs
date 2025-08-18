@@ -9,13 +9,16 @@ public class DiffusionHandler
     // The trading will occur when a certain difference threshold is reached.
     // Then it will share its morphogens with its neighbours proportional to the difference in concentration and the diffusion factor.
 
-    public float DiffusionThreshold { get; set; } = 0.1f;
+    public float diffusionThreshold = 0.1f;
+    public float diffusionFactor = 1f;
 
     public Simulation Simulation { get; }
 
     public DiffusionHandler(Simulation simulation)
     {
         this.Simulation = simulation;
+        this.diffusionFactor = simulation.diffusionFactor;
+        this.diffusionThreshold = simulation.diffusionThreshold;
     }
 
     public void Diffuse()
@@ -43,54 +46,28 @@ public class DiffusionHandler
 
                     var diff = morphogenConcentration - neighbour.GetMorphogen(morphogenId);
 
-                    if (diff <= DiffusionThreshold) continue;
+                    if (diff <= diffusionThreshold) continue;
 
                     neighboursToShare++;
 
-                    var rawShareAmount = diff * Simulation.Morphogens[morphogenId].diffusionFactor;
+                    var rawShareAmount = diff * Simulation.Morphogens[morphogenId].diffusionFactor * diffusionFactor;
                     tempMorphogenDelta[neighbourCoords] = rawShareAmount;
                 }
 
-                if (neighboursToShare > 0)
+                if (neighboursToShare <= 0) continue;
+
+                var totalShareAmount = 0f;
+
+                foreach (var neighbourCoords in tempMorphogenDelta.Keys)
                 {
-                    var totalShareAmount = 0f;
-                    foreach (var neighbourCoords in tempMorphogenDelta.Keys)
-                    {
-                        var shareAmount = tempMorphogenDelta[neighbourCoords] / (neighboursToShare + 1);
+                    var shareAmount = tempMorphogenDelta[neighbourCoords] / (neighboursToShare + 1);
 
-                        totalShareAmount += shareAmount;
+                    totalShareAmount += shareAmount;
 
-                        if (morphogenDelta.ContainsKey(neighbourCoords))
-                        {
-                            if (!morphogenDelta[neighbourCoords].TryAdd(morphogenId, shareAmount))
-                            {
-                                morphogenDelta[neighbourCoords][morphogenId] += shareAmount;
-                            }
-                        }
-                        else
-                        {
-                            morphogenDelta.Add(neighbourCoords, new Dictionary<int, float>());
-                            morphogenDelta[neighbourCoords].Add(morphogenId, shareAmount);
-                        }
-                    }
-
-                    if (morphogenDelta.ContainsKey(coords))
-                    {
-                        if (morphogenDelta[coords].ContainsKey(morphogenId))
-                        {
-                            morphogenDelta[coords][morphogenId] -= totalShareAmount;
-                        }
-                        else
-                        {
-                            morphogenDelta[coords].Add(morphogenId, -totalShareAmount);
-                        }
-                    }
-                    else
-                    {
-                        morphogenDelta.Add(coords, new Dictionary<int, float>());
-                        morphogenDelta[coords].Add(morphogenId, -totalShareAmount);
-                    }
+                    AddMorphogenTo(morphogenDelta, neighbourCoords, morphogenId, shareAmount);
                 }
+
+                AddMorphogenTo(morphogenDelta, coords, morphogenId, -totalShareAmount);
             }
         }
 
@@ -106,6 +83,22 @@ public class DiffusionHandler
 
                 Simulation.cells[coords].SetMorphogen(morphogenId, Simulation.cells[coords].GetMorphogen(morphogenId) + delta);
             }
+        }
+    }
+
+    void AddMorphogenTo(Dictionary<HexCoords, Dictionary<int, float>> delta, HexCoords coords, int id, float amount)
+    {
+        if (delta.ContainsKey(coords))
+        {
+            if (!delta[coords].TryAdd(id, amount))
+            {
+                delta[coords][id] += amount;
+            }
+        }
+        else
+        {
+            delta.Add(coords, new Dictionary<int, float>());
+            delta[coords].Add(id, amount);
         }
     }
 }
