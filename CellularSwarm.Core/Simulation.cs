@@ -13,8 +13,8 @@ public class Simulation
     public Dictionary<int, Gene> Genes = new();
 
     public readonly DiffusionHandler Diffuser;
-    public float diffusionFactor = 1f;
-    public float diffusionThreshold = 0.1f;
+    public float maxConcentration = 100f;
+    public int diffusionSteps = 3;
 
     private readonly static Random random = new();
 
@@ -82,11 +82,15 @@ public class Simulation
             var cell = cells[coords];
 
             cell.Apoptosis();
+            Diffuser.DiffuseAllOf(coords);
             cells.Remove(coords);
         }
 
-        Diffuser.Diffuse();
-        
+        for (int i = 0; i < diffusionSteps; i++)
+        {
+            Diffuser.Diffuse();
+        }
+
         return cells;
     }
 }

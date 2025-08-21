@@ -5,6 +5,7 @@ using System.Numerics;
 using IconFonts;
 
 using CellularSwarm.Core;
+using CellularSwarm.Core.Data;
 
 const int WIDTH = 1200;
 const int HEIGHT = 900;
@@ -18,15 +19,14 @@ Raylib.SetTargetFPS(60);
 
 var renderer = new HexRenderer();
 renderer.hexSize = hexSize;
+renderer.showText = false;
 
 var simulationRenderer = new SimulationRenderer();
 var simulation = simulationRenderer.simulation;
-simulation.Diffuser.diffusionFactor = 1f;
-simulation.Diffuser.diffusionThreshold = 0.1f;
 
 var camera = new Camera2D();
 var center = new Vector2(Raylib.GetRenderWidth() / 2, Raylib.GetRenderHeight() / 2);
-camera.Target = center;
+camera.Target = Vector2.Zero;
 camera.Offset = center / 2;
 camera.Zoom = 1f;
 camera.Rotation = 0f;
@@ -41,6 +41,8 @@ Vector3 palette = new(0f, 0f, 0f);
 int brushSize = 0;
 
 GridStates state = GridStates.Move;
+
+string saveLoadPath = "default-simulation";
 
 rlImGui.Setup(true);
 
@@ -115,6 +117,7 @@ void HandleMouseInput()
 
     SetGridMode();
     SetZoomWithMouse();
+    if (Raylib.IsMouseButtonDown(MouseButton.Middle)) { MoveCameraWithMouse(); }
 }
 
 // void TestInput()
@@ -266,24 +269,22 @@ void GridEditor()
     {
         ImGui.SetWindowFontScale(scale);
         ImGui.Text($"{state} tool is selected");
-        if (ImGui.Button(IconFonts.FontAwesome6.ArrowsUpDownLeftRight + " Move"))
+        if (ImGui.RadioButton(IconFonts.FontAwesome6.ArrowsUpDownLeftRight + " Move", state == GridStates.Move))
         {
             state = GridStates.Move;
         }
-        ImGui.SameLine();
-        if (ImGui.Button(IconFonts.FontAwesome6.Pen + " Brush"))
+        if (ImGui.RadioButton(IconFonts.FontAwesome6.Pen + " Brush", state == GridStates.Brush))
         {
             state = GridStates.Brush;
         }
         ImGui.SameLine();
-        if (ImGui.Button(IconFonts.FontAwesome6.Eraser + " Eraser"))
+        brushSize++;
+        ImGui.SliderInt("Size", ref brushSize, 1, 12);
+        brushSize--;
+        if (ImGui.RadioButton(IconFonts.FontAwesome6.Eraser + " Eraser", state == GridStates.Erase))
         {
             state = GridStates.Erase;
         }
-        ImGui.SameLine();
-        brushSize++;
-        ImGui.SliderInt("Brush Size", ref brushSize, 1, 12);
-        brushSize--;
         ImGui.SetColorEditOptions(ImGuiColorEditFlags.Float | ImGuiColorEditFlags.PickerHueWheel);
         ImGui.ColorEdit3("Morphogen", ref palette);
         if (ImGui.ColorButton("R", new Vector4(1f, 0f, 0f, 1f)))
@@ -310,18 +311,30 @@ void GridEditor()
 
 void SaveLoadWindow()
 {
+    var folder = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "";
+    folder = Directory.GetParent(folder)!.FullName;
+    folder = Directory.GetParent(folder)!.FullName;
+    folder = Path.Combine(folder, "Simulations");
+
     if (ImGui.Begin("Save & Load", ImGuiWindowFlags.AlwaysAutoResize))
     {
         ImGui.SetWindowFontScale(scale);
         if (ImGui.Button(FontAwesome6.Download + " Save"))
         {
+            var serialized = Serializer.Serialize(SimulationData.FromSimulation(simulation));
 
+            File.WriteAllText(Path.Combine(folder, $"{saveLoadPath}.json"), serialized);
         }
         ImGui.SameLine();
         if (ImGui.Button(FontAwesome6.Upload + " Load"))
         {
+            System.Console.WriteLine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
 
+            var deserialized = Serializer.Deserialize(File.ReadAllText(Path.Combine(folder, $"{saveLoadPath}.json")));
+            simulation = SimulationData.ToSimulation(deserialized);
+            simulationRenderer.simulation = simulation;
         }
+        ImGui.InputText(".json", ref saveLoadPath, 64);
     }
     ImGui.End();
 }
@@ -330,8 +343,6 @@ void ResetSimulation()
 {
     simulationRenderer = new();
     simulation = simulationRenderer.simulation;
-    simulation.Diffuser.diffusionFactor = 1f;
-    simulation.Diffuser.diffusionThreshold = 0.1f;
 }
 
 enum GridStates

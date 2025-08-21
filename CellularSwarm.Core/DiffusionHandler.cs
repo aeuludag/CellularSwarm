@@ -17,8 +17,6 @@ public class DiffusionHandler
     public DiffusionHandler(Simulation simulation)
     {
         this.Simulation = simulation;
-        this.diffusionFactor = simulation.diffusionFactor;
-        this.diffusionThreshold = simulation.diffusionThreshold;
     }
 
     public void Diffuse()
@@ -84,6 +82,43 @@ public class DiffusionHandler
                 Simulation.cells[coords].SetMorphogen(morphogenId, Simulation.cells[coords].GetMorphogen(morphogenId) + delta);
             }
         }
+    }
+
+    public void DiffuseAllOf(HexCoords coords)
+    {
+        var morphogenDelta = new Dictionary<HexCoords, Dictionary<int, float>>();
+
+        var cell = Simulation.cells[coords];
+        var neighbours = Simulation.GetNeighbours(coords);
+        var neighbourCount = neighbours.Count;
+
+        if (neighbourCount == 0) return;
+
+        foreach (var morphogenPair in cell.Morphogens)
+        {
+            var amount = morphogenPair.Value;
+            var shareAmount = amount / neighbourCount;
+
+            foreach (var neighbourCoords in neighbours)
+            {
+                AddMorphogenTo(morphogenDelta, neighbourCoords, morphogenPair.Key, shareAmount);
+            }
+        }
+
+        foreach (var morphogenPair in morphogenDelta)
+        {
+            var cellCoords = morphogenPair.Key;
+            var deltas = morphogenPair.Value;
+
+            foreach (var deltaPair in deltas)
+            {
+                var morphogenId = deltaPair.Key;
+                var delta = deltaPair.Value;
+
+                Simulation.cells[cellCoords].SetMorphogen(morphogenId, Simulation.cells[cellCoords].GetMorphogen(morphogenId) + delta);
+            }
+        }
+
     }
 
     void AddMorphogenTo(Dictionary<HexCoords, Dictionary<int, float>> delta, HexCoords coords, int id, float amount)

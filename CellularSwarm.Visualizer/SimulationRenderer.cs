@@ -16,17 +16,33 @@ public class SimulationRenderer
         simulation.CellTypes.Add(1, new CellType(1, "Meat"));
         simulation.CellTypes.Add(2, new CellType(2, "Skin"));
 
-        simulation.Morphogens.Add(0, new Morphogen(0, "A", 0.9f, 0.1f));
-        simulation.Morphogens.Add(1, new Morphogen(1, "B", 0.6f, 0.1f));
-        simulation.Morphogens.Add(2, new Morphogen(2, "C", 0.3f, 0.1f));
+        simulation.Morphogens.Add(0, new Morphogen(0, "Dieogen", 0.1f, 0.05f));
+        simulation.Morphogens.Add(1, new Morphogen(1, "Liveogen", 0.3f, 0.01f));
+        simulation.Morphogens.Add(2, new Morphogen(2, "blu", 0f, 0.01f));
 
-        simulation.GeneActions.Add(0, new GeneAction(0, GeneAction.ActionType.Multiply));
+        simulation.GeneActions.Add(0, new GeneAction(0, GeneAction.ActionType.Multiply,
+            new Dictionary<int, float>() { { 2, 0f } }));
         simulation.GeneActions.Add(1, new GeneAction(1, GeneAction.ActionType.Apoptosis));
+        simulation.GeneActions.Add(2, new GeneAction(2, GeneAction.ActionType.ChangeMorphogen,
+            new Dictionary<int, float>() { { 1, 50f }, { 2, 100f } }));
+        simulation.GeneActions.Add(3, new GeneAction(3, GeneAction.ActionType.ChangeMorphogen,
+            new Dictionary<int, float>() { { 0, 10f } }));
 
-        simulation.GeneConditions.Add(0, new ConcentrationCondition(0, false, 1, 50f, GeneCondition.ComparisonType.GreaterThan));
-        simulation.GeneConditions.Add(1, new ConcentrationCondition(1, false, 0, 30f, GeneCondition.ComparisonType.GreaterThan));
+        simulation.GeneConditions.Add(0,
+            new ConcentrationCondition(0, strong: false, not: false, 1, 40f, GeneCondition.ComparisonType.GreaterThan));
+        simulation.GeneConditions.Add(1,
+            new ConcentrationCondition(1, strong: false, not: false, 0, 60f, GeneCondition.ComparisonType.GreaterThan));
+        simulation.GeneConditions.Add(2,
+            new ConcentrationCondition(2, strong: false, not: false, 0, 80f, GeneCondition.ComparisonType.GreaterThan));
+        simulation.GeneConditions.Add(3,
+            new CellTypeCondition(3, strong: true, not: false, simulation.CellTypes[0]));
+        simulation.GeneConditions.Add(4,
+            new ConcentrationCondition(4, strong: false, not: false, 2, 10f, GeneCondition.ComparisonType.GreaterThan));
+        simulation.GeneConditions.Add(5,
+            new ConcentrationCondition(5, strong: true, not: false, 1, 30f, GeneCondition.ComparisonType.LessThan));
+        simulation.GeneConditions.Add(6,
+            new NeighbourCondition(6, strong: false, not: false, 6, GeneCondition.ComparisonType.LessThan));
 
-        simulation.GeneConditions.Add(2, new ConcentrationCondition(2, false, 0, 70f, GeneCondition.ComparisonType.GreaterThan));
 
         simulation.Genes.Add(0, new Gene(
             id: 0,
@@ -43,6 +59,26 @@ public class SimulationRenderer
             activatorConditions: new List<GeneCondition> { simulation.GeneConditions[2] },
             inhibitorConditions: new List<GeneCondition> { /*simulation.GeneConditions[1]*/ }
         ));
+
+        simulation.Genes.Add(2, new Gene(
+            id: 2,
+            name: "DieogenGENErator",
+            actions: new List<GeneAction> { simulation.GeneActions[3] },
+            activatorConditions: new List<GeneCondition> { simulation.GeneConditions[6], simulation.GeneConditions[5] },
+            inhibitorConditions: new List<GeneCondition> { /*simulation.GeneConditions[1]*/ }
+        ));
+
+        simulation.Genes.Add(3, new Gene(
+            id: 3,
+            name: "StemGEN",
+            actions: new List<GeneAction> { simulation.GeneActions[2] },
+            activatorConditions: new List<GeneCondition> { simulation.GeneConditions[4] },
+            inhibitorConditions: new List<GeneCondition> { /*simulation.GeneConditions[1]*/ }
+        ));
+
+        simulation.diffusionSteps = 3;
+        simulation.Diffuser.diffusionFactor = 1f;
+        simulation.Diffuser.diffusionThreshold = 0.1f;
     }
 
     public void SetPredefined()
@@ -149,8 +185,10 @@ public class SimulationRenderer
         cell.SetMorphogen(1, b);
         cell.SetMorphogen(2, c);
 
-        cell.genes.Add(simulation.Genes[0]);
-        cell.genes.Add(simulation.Genes[1]);
+        foreach (var gene in simulation.Genes)
+        {
+            cell.genes.Add(gene.Value);
+        }
 
         simulation.cells.Add(coords, cell);
     }

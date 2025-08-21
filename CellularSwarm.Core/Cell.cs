@@ -51,6 +51,11 @@ public class Cell
         {
             PerformAction(action);
         }
+        foreach (var morphogenPair in _morphogens)
+        {
+            _morphogens[morphogenPair.Key] *= 1 - simulation.Morphogens[morphogenPair.Key].decayFactor;
+            if (morphogenPair.Value <= simulation.Diffuser.diffusionThreshold) { _morphogens[morphogenPair.Key] = 0f; }
+        }
     }
 
     public List<GeneAction> GetAvailableActions()
@@ -96,7 +101,8 @@ public class Cell
 
     public void SetMorphogen(int id, float concentration)
     {
-        if(concentration <= 0) concentration = 0;
+        if (concentration <= 0) concentration = 0;
+        if (concentration >= simulation.maxConcentration) concentration = simulation.maxConcentration;
         _morphogens[id] = concentration;
     }
 

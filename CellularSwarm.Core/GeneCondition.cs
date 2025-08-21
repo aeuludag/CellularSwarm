@@ -23,9 +23,11 @@ public class ConcentrationCondition : GeneCondition
     public float thresholdConcentration;
     public ComparisonType comparisonType;
 
-    public ConcentrationCondition(int id, bool not, int morphogenID, float thresholdConcentration, ComparisonType comparisonType)
+    public ConcentrationCondition(int id, bool strong, bool not, int morphogenID, float thresholdConcentration, ComparisonType comparisonType, string name = "")
     {
         this.id = id;
+        this.name = name;
+        this.strong = strong;
         this.not = not;
         this.morphogenID = morphogenID;
         this.thresholdConcentration = thresholdConcentration;
@@ -39,9 +41,9 @@ public class ConcentrationCondition : GeneCondition
         switch (comparisonType)
         {
             case ComparisonType.GreaterThan:
-                return concentration >= thresholdConcentration;
+                return concentration > thresholdConcentration;
             case ComparisonType.LessThan:
-                return concentration <= thresholdConcentration;
+                return concentration < thresholdConcentration;
             case ComparisonType.EqualsTo:
                 return concentration == thresholdConcentration;
             default:
@@ -54,9 +56,11 @@ public class CellTypeCondition : GeneCondition
 {
     public CellType cellType;
 
-    public CellTypeCondition(int id, bool not, CellType cellType)
+    public CellTypeCondition(int id, bool strong, bool not, CellType cellType, string name = "")
     {
         this.id = id;
+        this.name = name;
+        this.strong = strong;
         this.not = not;
         this.cellType = cellType;
     }
@@ -72,9 +76,11 @@ public class NeighbourCondition : GeneCondition
     public int threshold;
     public ComparisonType comparisonType;
 
-    public NeighbourCondition(int id, bool not, int threshold, ComparisonType comparisonType)
+    public NeighbourCondition(int id, bool strong, bool not, int threshold, ComparisonType comparisonType, string name = "")
     {
         this.id = id;
+        this.name = name;
+        this.strong = strong;
         this.not = not;
         this.threshold = threshold;
         this.comparisonType = comparisonType;

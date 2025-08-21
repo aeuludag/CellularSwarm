@@ -31,17 +31,20 @@ public class GeneConditionData
         {
             data.conditionType = 0;
             data.morphogenId = concentrationCondition.morphogenID;
+            data.strong = condition.strong;
             data.thresholdConcentration = concentrationCondition.thresholdConcentration;
             data.comparisonType = (int)concentrationCondition.comparisonType;
         }
         else if (condition is CellTypeCondition cellTypeCondition)
         {
             data.conditionType = 1;
+            data.strong = condition.strong;
             data.cellTypeId = cellTypeCondition.cellType.id;
         }
         else if (condition is NeighbourCondition neighbourCondition)
         {
             data.conditionType = 2;
+            data.strong = condition.strong;
             data.neighbourThreshold = neighbourCondition.threshold;
             data.comparisonType = (int)neighbourCondition.comparisonType;
         }
@@ -56,6 +59,7 @@ public class GeneConditionData
             0 => new ConcentrationCondition(
                 id: data.id,
                 not: data.not,
+                strong: data.strong,
                 morphogenID: data.morphogenId,
                 thresholdConcentration: data.thresholdConcentration,
                 comparisonType: (GeneCondition.ComparisonType)data.comparisonType
@@ -63,11 +67,13 @@ public class GeneConditionData
             1 => new CellTypeCondition(
                 id: data.id,
                 not: data.not,
+                strong: data.strong,
                 cellType: simulation.CellTypes[data.cellTypeId]
             ),
             2 => new NeighbourCondition(
                 id: data.id,
                 not: data.not,
+                strong: data.strong,
                 threshold: data.neighbourThreshold,
                 comparisonType: (GeneCondition.ComparisonType)data.comparisonType
             ),

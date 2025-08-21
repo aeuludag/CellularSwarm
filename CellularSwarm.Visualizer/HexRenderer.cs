@@ -45,8 +45,8 @@ public class HexRenderer
 
             string morphoText;
             morphoText = string.Empty;
-            morphoText = $"{a:F2}\n{b:F2}\n{c:F2}";
             morphoText = $"{cellPair.Key}";
+            morphoText = $"{a:F2}\n{b:F2}\n{c:F2}";
 
             morphoText = showText ? morphoText : string.Empty;
             // max = 1f;

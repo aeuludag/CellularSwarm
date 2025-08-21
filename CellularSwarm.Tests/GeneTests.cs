@@ -24,8 +24,8 @@ public class GeneTests
 
         simulation.GeneActions.Add(0, new GeneAction(0, GeneAction.ActionType.Multiply));
 
-        simulation.GeneConditions.Add(0, new ConcentrationCondition(0, false, 0, 15f, ConcentrationCondition.ComparisonType.GreaterThan));
-        simulation.GeneConditions.Add(1, new ConcentrationCondition(1, false, 1, 20f, ConcentrationCondition.ComparisonType.GreaterThan));
+        simulation.GeneConditions.Add(0, new ConcentrationCondition(0, false, false, 0, 15f, ConcentrationCondition.ComparisonType.GreaterThan));
+        simulation.GeneConditions.Add(1, new ConcentrationCondition(1, false, false, 1, 20f, ConcentrationCondition.ComparisonType.GreaterThan));
 
         simulation.Genes.Add(0, new Gene(
             id: 0,
