@@ -23,7 +23,7 @@ public class DiffusionHandler
     {
         var morphogenDelta = new Dictionary<HexCoords, Dictionary<int, float>>();
 
-        foreach (var cellPair in Simulation.cells)
+        foreach (var cellPair in Simulation.Cells)
         {
             var coords = cellPair.Key;
             var cell = cellPair.Value;
@@ -40,7 +40,7 @@ public class DiffusionHandler
 
                 foreach (var neighbourCoords in neighbours)
                 {
-                    var neighbour = Simulation.cells[neighbourCoords];
+                    var neighbour = Simulation.Cells[neighbourCoords];
 
                     var diff = morphogenConcentration - neighbour.GetMorphogen(morphogenId);
 
@@ -79,7 +79,7 @@ public class DiffusionHandler
                 var morphogenId = deltaPair.Key;
                 var delta = deltaPair.Value;
 
-                Simulation.cells[coords].SetMorphogen(morphogenId, Simulation.cells[coords].GetMorphogen(morphogenId) + delta);
+                Simulation.Cells[coords].SetMorphogen(morphogenId, Simulation.Cells[coords].GetMorphogen(morphogenId) + delta);
             }
         }
     }
@@ -88,7 +88,7 @@ public class DiffusionHandler
     {
         var morphogenDelta = new Dictionary<HexCoords, Dictionary<int, float>>();
 
-        var cell = Simulation.cells[coords];
+        var cell = Simulation.Cells[coords];
         var neighbours = Simulation.GetNeighbours(coords);
         var neighbourCount = neighbours.Count;
 
@@ -115,7 +115,7 @@ public class DiffusionHandler
                 var morphogenId = deltaPair.Key;
                 var delta = deltaPair.Value;
 
-                Simulation.cells[cellCoords].SetMorphogen(morphogenId, Simulation.cells[cellCoords].GetMorphogen(morphogenId) + delta);
+                Simulation.Cells[cellCoords].SetMorphogen(morphogenId, Simulation.Cells[cellCoords].GetMorphogen(morphogenId) + delta);
             }
         }
 

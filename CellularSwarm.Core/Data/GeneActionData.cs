@@ -22,6 +22,6 @@ public class GeneActionData
 
     public static GeneAction ToGeneAction(GeneActionData data)
     {
-        return new GeneAction(data.id, (GeneAction.ActionType)data.actionType, data.actionMorphogens, data.cellTypeId, data.name);
+        return new GeneAction(data.id, (GeneAction.ActionType)data.actionType, data.actionMorphogens, data.name, data.cellTypeId);
     }
 }

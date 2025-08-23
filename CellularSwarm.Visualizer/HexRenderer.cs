@@ -16,14 +16,13 @@ public class HexRenderer
             {
                 if (Math.Abs(q + r) <= radius)
                 {
-                    string text = showText ? $"({q}, {r})" : string.Empty;
-                    Render(q + offset.q, r + offset.r, fillColor, outlineColor, text);
+                    Render(q + offset.q, r + offset.r, fillColor, outlineColor);
                 }
             }
         }
     }
 
-    public void Render(int q, int r, Color fillColor, Color outlineColor, string text = "")
+    public void Render(int q, int r, Color fillColor, Color outlineColor)
     {
         float x = hexSize * q * 3 / 2;
         float y = hexSize * (float)Math.Sqrt(3f) * (r + (q / 2f)); // hex_size * r * math.sqrt(3) + hex_size * q * math.sqrt(3) / 2
@@ -32,26 +31,62 @@ public class HexRenderer
         Raylib.DrawPoly(pos, 6, hexSize, 0, outlineColor);
         Raylib.DrawPoly(pos, 6, hexSize * 0.9f, 0, fillColor);
 
-        Raylib.DrawText(text, (int)pos.X - 20, (int)pos.Y - 20, 15, new Color(255, 255, 255, 127));
+        // if (showText) Raylib.DrawText(text, (int)pos.X - 20, (int)pos.Y - 20, 15, new Color(255, 255, 255, 127));
     }
 
-    public void RenderFromSimulation(Simulation simulation, Color fillColor, Color outlineColor, float max)
+    public void RenderFromSimulation(SimulationRenderer simulationRenderer)
     {
-        foreach (var cellPair in simulation.cells)
+        var simulation = simulationRenderer.Simulation;
+        var morphogenIdForColors = simulationRenderer.morphogenIdForColors;
+        var max = simulation.maxConcentration;
+
+        foreach (var cellPair in simulation.Cells)
         {
-            float a = cellPair.Value.GetMorphogen(0);
-            float b = cellPair.Value.GetMorphogen(1);
-            float c = cellPair.Value.GetMorphogen(2);
+            float r = cellPair.Value.GetMorphogen((int)morphogenIdForColors.X);
+            float g = cellPair.Value.GetMorphogen((int)morphogenIdForColors.Y);
+            float b = cellPair.Value.GetMorphogen((int)morphogenIdForColors.Z);
 
-            string morphoText;
-            morphoText = string.Empty;
-            morphoText = $"{cellPair.Key}";
-            morphoText = $"{a:F2}\n{b:F2}\n{c:F2}";
+            // string morphoText;
+            // morphoText = string.Empty;
+            // morphoText = $"{r:F2}\n{g:F2}\n{b:F2}";
+            // morphoText = $"{cellPair.Key}";
 
-            morphoText = showText ? morphoText : string.Empty;
-            // max = 1f;
-            var morphoColor = new Color(a / max, b / max, c / max);
-            Render(cellPair.Key.q, cellPair.Key.r, morphoColor, morphoColor, morphoText);
+            var morphoColor = new Color(r / max, g / max, b / max);
+            Render(cellPair.Key.q, cellPair.Key.r, morphoColor, morphoColor);
         }
+    }
+
+    public void RenderRectangle(HexCoords start, HexCoords end, Color fillColor, Color outlineColor)
+    {
+        var qDiff = end.q - start.q + 1;
+        var rDiff = end.r - start.r + 1 + (qDiff / 2);
+
+        int q = start.q;
+        int r = start.r;
+
+        var current = new HexCoords(q, r);
+        var newRowStart = GoRight(current);
+
+        for (int i = 0; i < qDiff; i++)
+        {
+            newRowStart = GoRight(current);
+            for (int j = 0; j < rDiff; j++)
+            {
+                Render(current.q, current.r, fillColor, outlineColor);
+                current = GoUp(current);
+            }
+            current = newRowStart;
+        }
+    }
+
+    HexCoords GoRight(HexCoords hexCoords)
+    {
+        if (hexCoords.q % 2 == 0) { return new HexCoords(hexCoords.q + 1, hexCoords.r); }
+        else { return new HexCoords(hexCoords.q + 1, hexCoords.r - 1); }
+
+    }
+    HexCoords GoUp(HexCoords hexCoords)
+    {
+        return new HexCoords(hexCoords.q, hexCoords.r + 1);
     }
 }

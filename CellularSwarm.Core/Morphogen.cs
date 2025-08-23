@@ -14,6 +14,13 @@ public class Morphogen
         this.diffusionFactor = diffusionFactor;
         this.decayFactor = decayFactor;
     }
+    public Morphogen(Morphogen morphogen)
+    {
+        id = morphogen.id;
+        name = morphogen.name;
+        diffusionFactor = morphogen.diffusionFactor;
+        decayFactor = morphogen.decayFactor;
+    }
 
     public bool Equals(Morphogen other) => other.id == id;
     public override bool Equals(object? obj) => obj is Morphogen other && (other.id == id);

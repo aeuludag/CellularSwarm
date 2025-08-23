@@ -4,10 +4,18 @@ using CellularSwarm.Core;
 
 public class SimulationRenderer
 {
-    public Simulation simulation;
+    public Simulation Simulation { get => _simulation; set => _simulation = value; }
+    Simulation _simulation;
+
+    public Vector3 morphogenIdForColors;
     public SimulationRenderer()
     {
-        simulation = new Simulation(
+        _simulation = SetSampleSimulation();
+    }
+
+    public Simulation SetSampleSimulation()
+    {
+        var simulation = new Simulation(
             id: 0,
             name: "Test Simulation"
         );
@@ -21,27 +29,27 @@ public class SimulationRenderer
         simulation.Morphogens.Add(2, new Morphogen(2, "blu", 0f, 0.01f));
 
         simulation.GeneActions.Add(0, new GeneAction(0, GeneAction.ActionType.Multiply,
-            new Dictionary<int, float>() { { 2, 0f } }));
-        simulation.GeneActions.Add(1, new GeneAction(1, GeneAction.ActionType.Apoptosis));
+            new Dictionary<int, float>() { { 2, 0f } }, "Stem Multiply"));
+        simulation.GeneActions.Add(1, new GeneAction(1, GeneAction.ActionType.Apoptosis, "Apoptosis"));
         simulation.GeneActions.Add(2, new GeneAction(2, GeneAction.ActionType.ChangeMorphogen,
-            new Dictionary<int, float>() { { 1, 50f }, { 2, 100f } }));
+            new Dictionary<int, float>() { { 1, 50f }, { 2, 100f } }, "Stem Morphogens"));
         simulation.GeneActions.Add(3, new GeneAction(3, GeneAction.ActionType.ChangeMorphogen,
-            new Dictionary<int, float>() { { 0, 10f } }));
+            new Dictionary<int, float>() { { 0, 10f } }, "Generate Red"));
 
         simulation.GeneConditions.Add(0,
-            new ConcentrationCondition(0, strong: false, not: false, 1, 40f, GeneCondition.ComparisonType.GreaterThan));
+            new ConcentrationCondition(0, strong: false, not: false, 1, 40f, GeneCondition.ComparisonType.GreaterThan, "Liveogen To Multiply"));
         simulation.GeneConditions.Add(1,
-            new ConcentrationCondition(1, strong: false, not: false, 0, 60f, GeneCondition.ComparisonType.GreaterThan));
+            new ConcentrationCondition(1, strong: false, not: false, 0, 60f, GeneCondition.ComparisonType.GreaterThan, "Dieogen To Prevent"));
         simulation.GeneConditions.Add(2,
-            new ConcentrationCondition(2, strong: false, not: false, 0, 80f, GeneCondition.ComparisonType.GreaterThan));
+            new ConcentrationCondition(2, strong: false, not: false, 0, 80f, GeneCondition.ComparisonType.GreaterThan, "Dieogen To Kill"));
         simulation.GeneConditions.Add(3,
-            new CellTypeCondition(3, strong: true, not: false, simulation.CellTypes[0]));
+            new CellTypeCondition(3, strong: true, not: false, simulation.CellTypes[0], "Is Stem Cell Type"));
         simulation.GeneConditions.Add(4,
-            new ConcentrationCondition(4, strong: false, not: false, 2, 10f, GeneCondition.ComparisonType.GreaterThan));
+            new ConcentrationCondition(4, strong: false, not: false, 2, 10f, GeneCondition.ComparisonType.GreaterThan, "Has Stem"));
         simulation.GeneConditions.Add(5,
-            new ConcentrationCondition(5, strong: true, not: false, 1, 30f, GeneCondition.ComparisonType.LessThan));
+            new ConcentrationCondition(5, strong: true, not: false, 1, 30f, GeneCondition.ComparisonType.LessThan, "Dieogen Generator"));
         simulation.GeneConditions.Add(6,
-            new NeighbourCondition(6, strong: false, not: false, 6, GeneCondition.ComparisonType.LessThan));
+            new NeighbourCondition(6, strong: false, not: false, 6, GeneCondition.ComparisonType.LessThan, "Edgy"));
 
 
         simulation.Genes.Add(0, new Gene(
@@ -79,77 +87,11 @@ public class SimulationRenderer
         simulation.diffusionSteps = 3;
         simulation.Diffuser.diffusionFactor = 1f;
         simulation.Diffuser.diffusionThreshold = 0.1f;
+
+        return simulation;
     }
 
-    public void SetPredefined()
-    {
-        float max = 100f;
-        (HexCoords pos, float a, float b, float c)[] predefined = [
-            (new HexCoords(0, 0), 0f, 0f, 0f),
-            (new HexCoords(0, 1), 0f, 0f, 0f),
-            (new HexCoords(0, -1), 0f, 0f, 0f),
-            (new HexCoords(-1, 0), 0f, 0f, 0f),
-            (new HexCoords(1, -1), 0f, 0f, 0f),
-            (new HexCoords(-1, 1), 0f, 0f, 0f),
-            (new HexCoords(-1, -1), 0f, 0f, 0f),
-            // (new HexCoords(1, 1), 0f, 0f, 0f),
-
-            (new HexCoords(1, 2), 0f, 0f, 0f),
-            (new HexCoords(1, 3), 0f, 0f, 0f),
-            (new HexCoords(1, 4), 0f, 0f, 0f),
-            (new HexCoords(1, 5), 0f, 0f, 0f),
-            (new HexCoords(0, 5), 0f, 0f, 0f),
-            (new HexCoords(-1, 5), 0f, 0f, 0f),
-            (new HexCoords(-2, 5), 0f, 0f, 0f),
-            (new HexCoords(-3, 5), 0f, 0f, 0f),
-            (new HexCoords(-4, 5), 0f, 0f, 0f),
-            (new HexCoords(-4, 4), 0f, 0f, 0f),
-            (new HexCoords(-4, 3), 0f, 0f, 0f),
-            (new HexCoords(-4, 2), 0f, 0f, 0f),
-            (new HexCoords(-4, 1), 0f, 0f, 0f),
-            (new HexCoords(-5, 3), 0f, 0f, 0f),
-            (new HexCoords(-5, 2), max, 0f, 0f),
-            (new HexCoords(-5, 1), 0f, 0f, 0f),
-            (new HexCoords(-6, 3), 0f, 0f, 0f),
-            (new HexCoords(-6, 2), 0f, 0f, 0f),
-
-            (new HexCoords(2, 0), 0f, 0f, 0f),
-            (new HexCoords(3, 0), 0f, 0f, 0f),
-            (new HexCoords(4, 0), 0f, 0f, 0f),
-            (new HexCoords(5, 0), 0f, 0f, 0f),
-            (new HexCoords(6, 0), 0f, 0f, max),
-            (new HexCoords(6, 1), 0f, 0f, 0f),
-            (new HexCoords(6, -1), 0f, 0f, 0f),
-            (new HexCoords(7, 0), 0f, 0f, 0f),
-            (new HexCoords(7, -1), 0f, 0f, 0f),
-            (new HexCoords(5, 1), 0f, 0f, 0f),
-
-            (new HexCoords(5, -3), 0f, max, 0f),
-            (new HexCoords(5, -2), 0f, 0f, 0f),
-            (new HexCoords(5, -4), 0f, 0f, 0f),
-            (new HexCoords(4, -2), 0f, 0f, 0f),
-            (new HexCoords(4, -3), 0f, 0f, 0f),
-            (new HexCoords(6, -3), 0f, 0f, 0f),
-            (new HexCoords(6, -4), 0f, 0f, 0f),
-
-            (new HexCoords(2, -2), 0f, 0f, 0f),
-            (new HexCoords(3, -3), 0f, 0f, 0f),
-
-            // (new HexCoords(-2, -1), 0f, 0f, 0f),
-            // (new HexCoords(-3, -1), 0f, 0f, 0f),
-            // (new HexCoords(-4, -1), 0f, 0f, 0f),
-            // (new HexCoords(-5, -1), 0f, 0f, 0f),
-            // (new HexCoords(-6, -1), 0f, 0f, 0f),
-            // (new HexCoords(-7, -1), 0f, 500f, 0f),
-        ];
-
-        for (int i = 0; i < predefined.Length; i++)
-        {
-            AddCell(predefined[i].pos, predefined[i].a, predefined[i].b, predefined[i].c);
-        }
-    }
-
-    public void GenerateCellGrid(int radius, HexCoords offset, (float a, float b, float c) abc)
+    public void GenerateCellGrid(int radius, HexCoords offset, Vector3 palette)
     {
         for (int q = -radius; q <= radius; q++)
         {
@@ -157,66 +99,56 @@ public class SimulationRenderer
             {
                 if (Math.Abs(q + r) <= radius)
                 {
-                    AddCell(offset + new HexCoords(q, r), abc.a, abc.b, abc.c);
+                    AddCell(offset + new HexCoords(q, r), palette);
                 }
             }
         }
     }
-    public void GenerateCellGrid(int radius, HexCoords offset, Vector3 palette, float max)
-    {
-        palette *= max;
-        GenerateCellGrid(radius, offset, (palette.X, palette.Y, palette.Z));
-    }
 
-    public void AddCell(HexCoords coords, float a, float b, float c)
+    public void AddCell(HexCoords coords, Vector3 palette)
     {
-        if (simulation.cells.ContainsKey(coords))
+        palette *= Simulation.maxConcentration;
+        if (Simulation.Cells.ContainsKey(coords))
         {
-            var theCell = simulation.cells[coords];
-            theCell.SetMorphogen(0, a);
-            theCell.SetMorphogen(1, b);
-            theCell.SetMorphogen(2, c);
+            var theCell = Simulation.Cells[coords];
+            theCell.SetMorphogen((int)morphogenIdForColors.X, palette.X);
+            theCell.SetMorphogen((int)morphogenIdForColors.Y, palette.Y);
+            theCell.SetMorphogen((int)morphogenIdForColors.Z, palette.Z);
             return;
         }
 
-        var cell = new Cell(simulation);
+        var cell = new Cell(Simulation);
 
-        cell.SetMorphogen(0, a);
-        cell.SetMorphogen(1, b);
-        cell.SetMorphogen(2, c);
+        cell.SetMorphogen((int)morphogenIdForColors.X, palette.X);
+        cell.SetMorphogen((int)morphogenIdForColors.Y, palette.Y);
+        cell.SetMorphogen((int)morphogenIdForColors.Z, palette.Z);
 
-        foreach (var gene in simulation.Genes)
+        foreach (var gene in Simulation.Genes)
         {
             cell.genes.Add(gene.Value);
         }
 
-        simulation.cells.Add(coords, cell);
-    }
-    public void AddCell(HexCoords coords, Vector3 palette, float max)
-    {
-        palette *= max;
-        AddCell(coords, palette.X, palette.Y, palette.Z);
+        Simulation.Cells.Add(coords, cell);
     }
 
     public void RemoveCell(HexCoords coords)
     {
-        if (!simulation.cells.ContainsKey(coords))
+        if (!Simulation.Cells.ContainsKey(coords))
         {
             return;
         }
 
-        simulation.cells.Remove(coords);
+        Simulation.Cells.Remove(coords);
     }
 
     public void ClearGrid()
     {
-        foreach (var cellPair in simulation.cells)
-        {
-            var coords = cellPair.Key;
-            var theCell = simulation.cells[coords];
-            theCell.SetMorphogen(0, 0);
-            theCell.SetMorphogen(1, 0);
-            theCell.SetMorphogen(2, 0);
-        }
+        // foreach (var cellPair in Simulation.cells)
+        // {
+        //     var coords = cellPair.Key;
+        //     var theCell = Simulation.cells[coords];
+        //     theCell.Morphogens.Clear();
+        // }
+        Simulation.Cells.Clear();
     }
 }

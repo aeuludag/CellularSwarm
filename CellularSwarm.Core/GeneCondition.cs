@@ -8,6 +8,7 @@ public abstract class GeneCondition
     public bool not;
 
     public abstract bool IsMet(Cell cell);
+    public abstract GeneCondition Clone();
 
     public enum ComparisonType
     {
@@ -19,36 +20,50 @@ public abstract class GeneCondition
 
 public class ConcentrationCondition : GeneCondition
 {
-    public int morphogenID;
+    public int morphogenId;
     public float thresholdConcentration;
     public ComparisonType comparisonType;
 
-    public ConcentrationCondition(int id, bool strong, bool not, int morphogenID, float thresholdConcentration, ComparisonType comparisonType, string name = "")
+    public ConcentrationCondition(int id, bool strong, bool not, int morphogenId, float thresholdConcentration, ComparisonType comparisonType, string name = "")
     {
         this.id = id;
         this.name = name;
         this.strong = strong;
         this.not = not;
-        this.morphogenID = morphogenID;
+        this.morphogenId = morphogenId;
+        this.thresholdConcentration = thresholdConcentration;
+        this.comparisonType = comparisonType;
+    }
+
+    public ConcentrationCondition(GeneCondition condition, int morphogenId, float thresholdConcentration, ComparisonType comparisonType)
+    {
+        this.id = condition.id;
+        this.name = condition.name;
+        this.strong = condition.strong;
+        this.not = condition.not;
+        this.morphogenId = morphogenId;
         this.thresholdConcentration = thresholdConcentration;
         this.comparisonType = comparisonType;
     }
 
     public override bool IsMet(Cell cell)
     {
-        float concentration = cell.GetMorphogen(morphogenID);
+        float concentration = cell.GetMorphogen(morphogenId);
 
-        switch (comparisonType)
+        bool result = comparisonType switch
         {
-            case ComparisonType.GreaterThan:
-                return concentration > thresholdConcentration;
-            case ComparisonType.LessThan:
-                return concentration < thresholdConcentration;
-            case ComparisonType.EqualsTo:
-                return concentration == thresholdConcentration;
-            default:
-                return false;
-        }
+            ComparisonType.GreaterThan => concentration > thresholdConcentration,
+            ComparisonType.LessThan => concentration < thresholdConcentration,
+            ComparisonType.EqualsTo => concentration == thresholdConcentration,
+            _ => false,
+        };
+
+        return result ^ not;
+    }
+
+    public override GeneCondition Clone()
+    {
+        return new ConcentrationCondition(id, strong, not, morphogenId, thresholdConcentration, comparisonType, name);
     }
 }
 
@@ -65,9 +80,23 @@ public class CellTypeCondition : GeneCondition
         this.cellType = cellType;
     }
 
+    public CellTypeCondition(GeneCondition condition, CellType cellType)
+    {
+        this.id = condition.id;
+        this.name = condition.name;
+        this.strong = condition.strong;
+        this.not = condition.not;
+        this.cellType = cellType;
+    }
+
     public override bool IsMet(Cell cell)
     {
-        return cell.cellType == cellType;
+        return (cell.cellType == cellType) ^ not;
+    }
+
+    public override GeneCondition Clone()
+    {
+        return new CellTypeCondition(id, strong, not, cellType, name);
     }
 }
 
@@ -86,20 +115,33 @@ public class NeighbourCondition : GeneCondition
         this.comparisonType = comparisonType;
     }
 
+    public NeighbourCondition(GeneCondition condition, int threshold, ComparisonType comparisonType)
+    {
+        this.id = condition.id;
+        this.name = condition.name;
+        this.strong = condition.strong;
+        this.not = condition.not;
+        this.threshold = threshold;
+        this.comparisonType = comparisonType;
+    }
+
     public override bool IsMet(Cell cell)
     {
         var count = cell.neighbourCount;
 
-        switch (comparisonType)
+        bool result = comparisonType switch
         {
-            case ComparisonType.LessThan:
-                return count < threshold;
-            case ComparisonType.GreaterThan:
-                return count > threshold;
-            case ComparisonType.EqualsTo:
-                return count == threshold;
-            default:
-                return false;
-        }
+            ComparisonType.LessThan => count < threshold,
+            ComparisonType.GreaterThan => count > threshold,
+            ComparisonType.EqualsTo => count == threshold,
+            _ => false,
+        };
+
+        return result ^ not;
+    }
+
+    public override GeneCondition Clone()
+    {
+        return new NeighbourCondition(id, strong, not, threshold, comparisonType, name);
     }
 }

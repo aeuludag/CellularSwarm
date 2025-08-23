@@ -49,9 +49,9 @@ public class SerializerTests
         var cell3 = new Cell(cell);
         cell3.SetMorphogen(2, 10f);
 
-        simulation.cells.Add(new HexCoords(0, 0), cell);
-        simulation.cells.Add(new HexCoords(0, 1), cell2);
-        simulation.cells.Add(new HexCoords(0, 2), cell3);
+        simulation.Cells.Add(new HexCoords(0, 0), cell);
+        simulation.Cells.Add(new HexCoords(0, 1), cell2);
+        simulation.Cells.Add(new HexCoords(0, 2), cell3);
 
         simulation.Step();
 
@@ -116,7 +116,7 @@ public class SerializerTests
         // Assert
         Assert.Equal(originalData.id, newSimulation.id);
         Assert.Equal(originalData.name, newSimulation.name);
-        Assert.Equal(originalData.cells.Count, newSimulation.cells.Count);
+        Assert.Equal(originalData.cells.Count, newSimulation.Cells.Count);
         Assert.Equal(originalData.cellTypes.Count, newSimulation.CellTypes.Count);
         Assert.Equal(originalData.morphogens.Count, newSimulation.Morphogens.Count);
         Assert.Equal(originalData.geneActions.Count, newSimulation.GeneActions.Count);

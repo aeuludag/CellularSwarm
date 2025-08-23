@@ -20,10 +20,19 @@ public class Gene
         this.inhibitorConditions = inhibitorConditions;
     }
 
+    public Gene(Gene gene)
+    {
+        id = gene.id;
+        name = gene.name;
+        actions = gene.actions;
+        activatorConditions = new(gene.activatorConditions);
+        inhibitorConditions = new(gene.inhibitorConditions);
+    }
+
     public bool ShouldBeActive(Cell cell)
     {
-        if(NecessaryConditionsMet(inhibitorConditions, cell)) { return false; }
-        if(NecessaryConditionsMet(activatorConditions, cell)) { return true; }
+        if (NecessaryConditionsMet(inhibitorConditions, cell)) { return false; }
+        if (NecessaryConditionsMet(activatorConditions, cell)) { return true; }
         return false;
     }
 

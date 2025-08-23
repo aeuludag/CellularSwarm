@@ -147,6 +147,12 @@ public struct CellType
         this.name = name;
     }
 
+    public CellType(CellType cellType)
+    {
+        id = cellType.id;
+        name = cellType.name;
+    }
+
     public static bool operator ==(CellType left, CellType right) => left.Equals(right);
     public static bool operator !=(CellType left, CellType right) => !left.Equals(right);
     public bool Equals(CellType other) => other.id == id;

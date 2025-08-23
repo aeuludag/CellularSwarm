@@ -3,6 +3,7 @@ namespace CellularSwarm.Core.Data;
 public class GeneConditionData
 {
     public int id;
+    public string name = string.Empty;
     public bool strong;
     public bool not;
     public int conditionType; // 0: Concentration, 1: CellType, 2: Neighbour
@@ -23,6 +24,7 @@ public class GeneConditionData
         var data = new GeneConditionData
         {
             id = condition.id,
+            name = condition.name,
             strong = condition.strong,
             not = condition.not
         };
@@ -30,7 +32,7 @@ public class GeneConditionData
         if (condition is ConcentrationCondition concentrationCondition)
         {
             data.conditionType = 0;
-            data.morphogenId = concentrationCondition.morphogenID;
+            data.morphogenId = concentrationCondition.morphogenId;
             data.strong = condition.strong;
             data.thresholdConcentration = concentrationCondition.thresholdConcentration;
             data.comparisonType = (int)concentrationCondition.comparisonType;
@@ -60,22 +62,25 @@ public class GeneConditionData
                 id: data.id,
                 not: data.not,
                 strong: data.strong,
-                morphogenID: data.morphogenId,
+                morphogenId: data.morphogenId,
                 thresholdConcentration: data.thresholdConcentration,
-                comparisonType: (GeneCondition.ComparisonType)data.comparisonType
+                comparisonType: (GeneCondition.ComparisonType)data.comparisonType,
+                name: data.name
             ),
             1 => new CellTypeCondition(
                 id: data.id,
                 not: data.not,
                 strong: data.strong,
-                cellType: simulation.CellTypes[data.cellTypeId]
+                cellType: simulation.CellTypes[data.cellTypeId],
+                name: data.name
             ),
             2 => new NeighbourCondition(
                 id: data.id,
                 not: data.not,
                 strong: data.strong,
                 threshold: data.neighbourThreshold,
-                comparisonType: (GeneCondition.ComparisonType)data.comparisonType
+                comparisonType: (GeneCondition.ComparisonType)data.comparisonType,
+                name: data.name
             ),
             _ => throw new ArgumentException("Invalid condition type")
         };

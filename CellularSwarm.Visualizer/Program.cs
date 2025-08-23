@@ -6,6 +6,7 @@ using IconFonts;
 
 using CellularSwarm.Core;
 using CellularSwarm.Core.Data;
+using CellularSwarm.Visualizer;
 
 const int WIDTH = 1200;
 const int HEIGHT = 900;
@@ -14,15 +15,20 @@ float scale = 1f;
 
 float hexSize = 50f;
 
-Raylib.InitWindow(WIDTH, HEIGHT, "Diffuser Test");
+Raylib.InitWindow(WIDTH, HEIGHT, "Cellular Swarm");
 Raylib.SetTargetFPS(60);
 
 var renderer = new HexRenderer();
 renderer.hexSize = hexSize;
 renderer.showText = false;
 
-var simulationRenderer = new SimulationRenderer();
-var simulation = simulationRenderer.simulation;
+var backRenderer = new HexRenderer();
+backRenderer.hexSize = hexSize;
+backRenderer.showText = false;
+
+SimulationRenderer simulationRenderer = new();
+Simulation simulation;
+ResetSimulation();
 
 var camera = new Camera2D();
 var center = new Vector2(Raylib.GetRenderWidth() / 2, Raylib.GetRenderHeight() / 2);
@@ -33,7 +39,6 @@ camera.Rotation = 0f;
 
 bool play = false;
 var speed = 15f;
-float max = 100f;
 var mouseHex = new HexCoords(0, 0);
 var showHexCursor = false;
 
@@ -43,6 +48,10 @@ int brushSize = 0;
 GridStates state = GridStates.Move;
 
 string saveLoadPath = "default-simulation";
+
+var backColor = new Color(40, 40, 40);
+
+var editor = new Editor(simulationRenderer);
 
 rlImGui.Setup(true);
 
@@ -54,25 +63,34 @@ while (!Raylib.WindowShouldClose())
     // camera.Target = center;
     // camera.Offset = center / 2;
 
-    speed = 15f / camera.Zoom;
+    speed = 750f / camera.Zoom;
 
     mouseHex = MouseToHex();
     HandleKeyboardInput();
     HandleMouseInput();
 
-    camera.Zoom = Math.Clamp(camera.Zoom, 0.1f, 2f);
+    camera.Zoom = Math.Clamp(camera.Zoom, 0.01f, 2f);
 
     if (play) { simulation.Step(); }
 
     // --- Draw ---
     Raylib.BeginDrawing();
-    Raylib.ClearBackground(new Color(40, 40, 40));
+    Raylib.ClearBackground(backColor);
     Raylib.BeginMode2D(camera);
 
     // // renderer.RenderRadialGrid(9, Color.RayWhite, Color.LightGray);
     // renderer.RenderRadialGrid(12, new Color(60, 60, 60), new Color(40, 40, 40), PointsToHex(camera.Target));
     // renderer.RenderRadialGrid(3, new Color(80, 80, 80), new Color(40, 40, 40), PointsToHex(camera.Target));
-    renderer.RenderFromSimulation(simulation, Color.White, Color.White, max);
+
+    var bottomLeft = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(0, HEIGHT), camera));
+    var topRight = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(WIDTH, 0), camera));
+
+    if(camera.Zoom >= 0.5f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, Color.DarkGray);
+
+    renderer.RenderFromSimulation(simulationRenderer);
+
+    // renderer.Render(bottomLeft.q, bottomLeft.r, new Color(255, 0, 0, 100), new Color(0, 0, 255, 100), "BL");
+    // renderer.Render(topRight.q, topRight.r, new Color(255, 0, 0, 100), new Color(0, 0, 255, 100), "TR");
 
     if (showHexCursor)
         renderer.RenderRadialGrid(brushSize, new Color(palette.X, palette.Y, palette.Z, 0.1f), new Color(palette.X, palette.Y, palette.Z, 0.1f), mouseHex);
@@ -81,6 +99,7 @@ while (!Raylib.WindowShouldClose())
     Raylib.EndMode2D();
 
     DrawUI();
+    Raylib.DrawText(Raylib.GetFPS().ToString(), 5, 5, 20, Color.White);
 
     Raylib.EndDrawing();
 }
@@ -95,6 +114,10 @@ void DrawUI()
     Controls();
     GridEditor();
     SaveLoadWindow();
+    editor.ShowMorphogenEditor();
+    editor.ShowGeneActionEditor();
+    editor.ShowCellTypeEditor();
+    editor.ShowGeneConditionEditor();
 
     rlImGui.End();
 }
@@ -148,11 +171,11 @@ void SetZoomWithMouse()
 
 void MoveCamera()
 {
-    if (Raylib.IsKeyDown(KeyboardKey.W)) { camera.Target -= Vector2.UnitY * speed; }
-    if (Raylib.IsKeyDown(KeyboardKey.S)) { camera.Target += Vector2.UnitY * speed; }
-
-    if (Raylib.IsKeyDown(KeyboardKey.A)) { camera.Target -= Vector2.UnitX * speed; }
-    if (Raylib.IsKeyDown(KeyboardKey.D)) { camera.Target += Vector2.UnitX * speed; }
+    var dt = Raylib.GetFrameTime();
+    if (Raylib.IsKeyDown(KeyboardKey.W)) { camera.Target -= Vector2.UnitY * speed * dt; }
+    if (Raylib.IsKeyDown(KeyboardKey.S)) { camera.Target += Vector2.UnitY * speed * dt; }
+    if (Raylib.IsKeyDown(KeyboardKey.A)) { camera.Target -= Vector2.UnitX * speed * dt; }
+    if (Raylib.IsKeyDown(KeyboardKey.D)) { camera.Target += Vector2.UnitX * speed * dt; }
 }
 
 void MoveCameraWithMouse()
@@ -193,11 +216,11 @@ void SetGridMode()
             showHexCursor = true;
             if (Raylib.IsMouseButtonDown(MouseButton.Left))
             {
-                simulationRenderer.GenerateCellGrid(brushSize, mouseHex, palette, max);
+                simulationRenderer.GenerateCellGrid(brushSize, mouseHex, palette);
             }
             if (Raylib.IsMouseButtonDown(MouseButton.Right))
             {
-                simulationRenderer.GenerateCellGrid(brushSize, mouseHex, Vector3.Zero, max);
+                simulationRenderer.GenerateCellGrid(brushSize, mouseHex, Vector3.Zero);
             }
             break;
         case GridStates.Erase:
@@ -332,7 +355,7 @@ void SaveLoadWindow()
 
             var deserialized = Serializer.Deserialize(File.ReadAllText(Path.Combine(folder, $"{saveLoadPath}.json")));
             simulation = SimulationData.ToSimulation(deserialized);
-            simulationRenderer.simulation = simulation;
+            simulationRenderer.Simulation = simulation;
         }
         ImGui.InputText(".json", ref saveLoadPath, 64);
     }
@@ -341,8 +364,9 @@ void SaveLoadWindow()
 
 void ResetSimulation()
 {
-    simulationRenderer = new();
-    simulation = simulationRenderer.simulation;
+    simulationRenderer.Simulation = simulationRenderer.SetSampleSimulation();
+    simulationRenderer.morphogenIdForColors = new(0, 1, 2);
+    simulation = simulationRenderer.Simulation;
 }
 
 enum GridStates
