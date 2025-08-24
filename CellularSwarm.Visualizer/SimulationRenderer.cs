@@ -7,17 +7,20 @@ public class SimulationRenderer
     public Simulation Simulation { get => _simulation; set => _simulation = value; }
     Simulation _simulation;
 
-    public Vector3 morphogenIdForColors;
+    public int redMorphogenId;
+    public int greenMorphogenId;
+    public int blueMorphogenId;
+
     public SimulationRenderer()
     {
-        _simulation = SetSampleSimulation();
+        _simulation = new(0, "new");
     }
 
     public Simulation SetSampleSimulation()
     {
         var simulation = new Simulation(
             id: 0,
-            name: "Test Simulation"
+            name: "default"
         );
 
         simulation.CellTypes.Add(0, new CellType(0, "Stem"));
@@ -111,17 +114,17 @@ public class SimulationRenderer
         if (Simulation.Cells.ContainsKey(coords))
         {
             var theCell = Simulation.Cells[coords];
-            theCell.SetMorphogen((int)morphogenIdForColors.X, palette.X);
-            theCell.SetMorphogen((int)morphogenIdForColors.Y, palette.Y);
-            theCell.SetMorphogen((int)morphogenIdForColors.Z, palette.Z);
+            if (redMorphogenId >= 0) theCell.SetMorphogen(redMorphogenId, palette.X);
+            if (greenMorphogenId >= 0) theCell.SetMorphogen(greenMorphogenId, palette.Y);
+            if (blueMorphogenId >= 0) theCell.SetMorphogen(blueMorphogenId, palette.Z);
             return;
         }
 
         var cell = new Cell(Simulation);
 
-        cell.SetMorphogen((int)morphogenIdForColors.X, palette.X);
-        cell.SetMorphogen((int)morphogenIdForColors.Y, palette.Y);
-        cell.SetMorphogen((int)morphogenIdForColors.Z, palette.Z);
+        if (redMorphogenId >= 0) cell.SetMorphogen(redMorphogenId, palette.X);
+        if (greenMorphogenId >= 0) cell.SetMorphogen(greenMorphogenId, palette.Y);
+        if (blueMorphogenId >= 0) cell.SetMorphogen(blueMorphogenId, palette.Z);
 
         foreach (var gene in Simulation.Genes)
         {

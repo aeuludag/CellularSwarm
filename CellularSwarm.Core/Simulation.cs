@@ -17,12 +17,16 @@ public class Simulation
     public float maxConcentration = 100f;
     public int diffusionSteps = 3;
 
+    public CellType DefaultCellType { get; protected set; }
+    public Morphogen DefaultMorphogen { get; protected set; }
+    public GeneAction DefaultGeneAction { get; protected set; }
+    public GeneCondition DefaultGeneCondition { get; protected set; }
+    public ConcentrationCondition DefaultConcentrationCondition { get; protected set; }
+    public CellTypeCondition DefaultCellTypeCondition { get; protected set; }
+    public NeighbourCondition DefaultNeighbourCondition { get; protected set; }
+    public Gene DefaultGene { get; protected set; }
+
     private readonly static Random random = new();
-    private CellType defaultCellType;
-    private Morphogen defaultMorphogen;
-    private GeneAction defaultGeneAction;
-    private GeneCondition defaultGeneCondition;
-    private Gene defaultGene;
 
     public Simulation(int id, string name)
     {
@@ -31,11 +35,20 @@ public class Simulation
 
         Diffuser = new DiffusionHandler(this);
 
-        defaultCellType = Add(new CellType(-1, "Default Cell Type"));
-        defaultMorphogen = Add(new Morphogen(-1, "Default Morphogen", 1f, 0.1f));
-        defaultGeneAction = Add(new GeneAction(-1, GeneAction.ActionType.Multiply, "Default Gene Action"));
-        defaultGeneCondition = Add(new NeighbourCondition(-1, false, false, 3, GeneCondition.ComparisonType.GreaterThan, "Default Condition"));
-        defaultGene = Add(new Gene(-1, "Default Gene", [defaultGeneAction], [defaultGeneCondition], []));
+        DefaultCellType = new CellType(0, "New Cell Type");
+        DefaultMorphogen = new Morphogen(0, "New Morphogen", 1f, 0.1f);
+        DefaultGeneAction = new GeneAction(0, GeneAction.ActionType.Multiply, "New Gene Action");
+        DefaultConcentrationCondition = new ConcentrationCondition(0, false, false, 0, 10f, GeneCondition.ComparisonType.GreaterThan, "New Concentration Condition");
+        DefaultCellTypeCondition = new CellTypeCondition(0, false, false, DefaultCellType, "New Cell Type Condition");
+        DefaultNeighbourCondition = new NeighbourCondition(0, false, false, 3, GeneCondition.ComparisonType.GreaterThan, "New Neighbour Condition");
+        DefaultGeneCondition = DefaultNeighbourCondition.Clone();
+        DefaultGene = new Gene(0, "New Gene", [], [], []);
+
+        CellTypes.Add(0, new(DefaultCellType));
+        Morphogens.Add(0, new(DefaultMorphogen));
+        GeneActions.Add(0, new(DefaultGeneAction));
+        GeneConditions.Add(0, DefaultGeneCondition.Clone());
+        Genes.Add(0, new(DefaultGene));
     }
 
     public List<HexCoords> GetNeighbours(HexCoords coords)
@@ -146,13 +159,18 @@ public class Simulation
         return gene;
     }
 
+    public void RemoveMorphogen(int id)
+    {
+        Morphogens.Remove(id);
+    }
+
     public Morphogen GetMorphogen(int id)
     {
         if (Morphogens.TryGetValue(id, out var morphogen))
         {
             return morphogen;
         }
-        var newMorphogen = new Morphogen(defaultMorphogen);
+        var newMorphogen = new Morphogen(DefaultMorphogen);
         newMorphogen.id = id;
         Morphogens.Add(id, newMorphogen);
         return newMorphogen;
@@ -163,7 +181,7 @@ public class Simulation
         {
             return cellType;
         }
-        var newCellType = new CellType(defaultCellType);
+        var newCellType = new CellType(DefaultCellType);
         newCellType.id = id;
         CellTypes.Add(id, newCellType);
         return newCellType;
@@ -174,7 +192,7 @@ public class Simulation
         {
             return geneAction;
         }
-        var newGeneAction = new GeneAction(defaultGeneAction);
+        var newGeneAction = new GeneAction(DefaultGeneAction);
         newGeneAction.id = id;
         GeneActions.Add(id, newGeneAction);
         return newGeneAction;
@@ -185,7 +203,7 @@ public class Simulation
         {
             return geneCondition;
         }
-        var newGeneCondition = defaultGeneCondition.Clone();
+        var newGeneCondition = DefaultGeneCondition.Clone();
         newGeneCondition.id = id;
         GeneConditions.Add(id, newGeneCondition);
         return newGeneCondition;
@@ -196,7 +214,7 @@ public class Simulation
         {
             return gene;
         }
-        return Add(new Gene(defaultGene));
+        return Add(new Gene(DefaultGene));
     }
 
     int RandomId<T>(Dictionary<int, T> dict)

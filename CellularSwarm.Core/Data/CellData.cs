@@ -1,11 +1,15 @@
 using System;
+using Newtonsoft.Json;
 
 namespace CellularSwarm.Core.Data;
 
 public class CellData
 {
+    // [JsonProperty("ct")]
     public int cellTypeID;
+    // [JsonProperty("g")]
     public List<int> geneIDs = new();
+    // [JsonProperty("m")]
     public Dictionary<int, float> morphogens = new();
 
     public static CellData FromCell(Cell cell)

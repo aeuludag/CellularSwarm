@@ -5,18 +5,23 @@ using System.Numerics;
 using IconFonts;
 
 using CellularSwarm.Core;
-using CellularSwarm.Core.Data;
 using CellularSwarm.Visualizer;
 
-const int WIDTH = 1200;
-const int HEIGHT = 900;
+int width = 1200;
+int height = 900;
+
+bool isFullScreen = false;
 
 float scale = 1f;
 
 float hexSize = 50f;
 
-Raylib.InitWindow(WIDTH, HEIGHT, "Cellular Swarm");
+Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
+Raylib.InitWindow(width, height, "Cellular Swarm");
+Raylib.SetWindowMinSize(400, 400);
 Raylib.SetTargetFPS(60);
+
+var windowPos = Raylib.GetWindowPosition();
 
 var renderer = new HexRenderer();
 renderer.hexSize = hexSize;
@@ -26,30 +31,37 @@ var backRenderer = new HexRenderer();
 backRenderer.hexSize = hexSize;
 backRenderer.showText = false;
 
-SimulationRenderer simulationRenderer = new();
-Simulation simulation;
-ResetSimulation();
 
 var camera = new Camera2D();
-var center = new Vector2(Raylib.GetRenderWidth() / 2, Raylib.GetRenderHeight() / 2);
+var center = new Vector2(Raylib.GetScreenWidth() / 2, Raylib.GetScreenHeight() / 2);
 camera.Target = Vector2.Zero;
-camera.Offset = center / 2;
+camera.Offset = center;
 camera.Zoom = 1f;
 camera.Rotation = 0f;
+
+renderer.camera = camera;
 
 bool play = false;
 var speed = 15f;
 var mouseHex = new HexCoords(0, 0);
 var showHexCursor = false;
+var showInspectCursor = false;
+
+var showInspectWindow = false;
 
 Vector3 palette = new(0f, 0f, 0f);
 int brushSize = 0;
 
 GridStates state = GridStates.Move;
 
-string saveLoadPath = "default-simulation";
+SaveLoadHandler saveLoadHandler = new();
+string saveLoadPath = "default";
 
 var backColor = new Color(40, 40, 40);
+
+SimulationRenderer simulationRenderer = new();
+Simulation simulation;
+ResetSimulation();
 
 var editor = new Editor(simulationRenderer);
 
@@ -59,9 +71,9 @@ while (!Raylib.WindowShouldClose())
 {
     // --- Update ---
 
-    // center = new Vector2(Raylib.GetRenderWidth() / 2, Raylib.GetRenderHeight() / 2);
-    // camera.Target = center;
-    // camera.Offset = center / 2;
+    center = new Vector2(Raylib.GetScreenWidth() / 2, Raylib.GetScreenHeight() / 2);
+    camera.Offset = center;
+    renderer.camera = camera;
 
     speed = 750f / camera.Zoom;
 
@@ -82,10 +94,10 @@ while (!Raylib.WindowShouldClose())
     // renderer.RenderRadialGrid(12, new Color(60, 60, 60), new Color(40, 40, 40), PointsToHex(camera.Target));
     // renderer.RenderRadialGrid(3, new Color(80, 80, 80), new Color(40, 40, 40), PointsToHex(camera.Target));
 
-    var bottomLeft = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(0, HEIGHT), camera));
-    var topRight = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(WIDTH, 0), camera));
+    var bottomLeft = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(0, Raylib.GetScreenHeight()), camera));
+    var topRight = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), 0), camera));
 
-    if(camera.Zoom >= 0.5f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, Color.DarkGray);
+    if (camera.Zoom >= 0.3f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, Color.DarkGray);
 
     renderer.RenderFromSimulation(simulationRenderer);
 
@@ -93,13 +105,21 @@ while (!Raylib.WindowShouldClose())
     // renderer.Render(topRight.q, topRight.r, new Color(255, 0, 0, 100), new Color(0, 0, 255, 100), "TR");
 
     if (showHexCursor)
+    {
         renderer.RenderRadialGrid(brushSize, new Color(palette.X, palette.Y, palette.Z, 0.1f), new Color(palette.X, palette.Y, palette.Z, 0.1f), mouseHex);
+    }
+
+    if (showInspectCursor)
+    {
+        renderer.Render(mouseHex.q, mouseHex.r, new Color(0f, 0f, 0f, 0.1f), new Color(1f, 1f, 1f, 0.2f));
+    }
     // renderer.Render(mouseHex.q, mouseHex.r, new Color(palette.X, palette.Y, palette.Z, 0.1f), new Color(palette.X, palette.Y, palette.Z, 0.1f));
 
     Raylib.EndMode2D();
 
     DrawUI();
-    Raylib.DrawText(Raylib.GetFPS().ToString(), 5, 5, 20, Color.White);
+
+    Raylib.DrawText($"FPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 5, 20, Color.White);
 
     Raylib.EndDrawing();
 }
@@ -114,10 +134,8 @@ void DrawUI()
     Controls();
     GridEditor();
     SaveLoadWindow();
-    editor.ShowMorphogenEditor();
-    editor.ShowGeneActionEditor();
-    editor.ShowCellTypeEditor();
-    editor.ShowGeneConditionEditor();
+    editor.ShowWindowManager();
+    if (showInspectWindow) ShowInspectWindow();
 
     rlImGui.End();
 }
@@ -131,7 +149,7 @@ void HandleKeyboardInput()
     ControlSimulationWithKeyboard();
     SetGridModeWithKeyboard();
 
-    if (Raylib.IsKeyPressed(KeyboardKey.F)) Raylib.ToggleFullscreen();
+    if (Raylib.IsKeyPressed(KeyboardKey.F)) ToggleFullscreen();
 }
 
 void HandleMouseInput()
@@ -156,17 +174,46 @@ void HandleMouseInput()
 //     }
 // }
 
+void ToggleFullscreen()
+// by gpt
+{
+    if (!isFullScreen)
+    {
+        // Save window size before switching
+        width = Raylib.GetScreenWidth();
+        height = Raylib.GetScreenHeight();
+
+        windowPos = Raylib.GetWindowPosition();
+
+        int mon = Raylib.GetCurrentMonitor();
+        int monW = Raylib.GetMonitorWidth(mon);
+        int monH = Raylib.GetMonitorHeight(mon);
+
+        Raylib.SetWindowPosition(0, 0);
+        Raylib.SetWindowSize(monW, monH);
+        isFullScreen = true;
+    }
+    else
+    {
+        Raylib.SetWindowPosition((int)windowPos.X, (int)windowPos.Y);
+        Raylib.SetWindowSize(width, height); // restore windowed size
+        isFullScreen = false;
+    }
+}
+
 void SetZoomWithMouse()
 {
     float scroll = Raylib.GetMouseWheelMove();
-    if (scroll > float.Epsilon)
-    {
-        camera.Zoom *= 1.1f;
-    }
-    else if (scroll < -float.Epsilon)
-    {
-        camera.Zoom *= 0.9f;
-    }
+    float scrollAmount = Math.Clamp(scroll * 0.1f, -0.2f, +0.2f);
+    camera.Zoom *= 1f + scrollAmount;
+    // if (scroll > float.Epsilon)
+    // {
+    //     camera.Zoom *= 1.1f;
+    // }
+    // else if (scroll < -float.Epsilon)
+    // {
+    //     camera.Zoom *= 0.9f;
+    // }
 }
 
 void MoveCamera()
@@ -195,6 +242,7 @@ void SetGridModeWithKeyboard()
     if (Raylib.IsKeyPressed(KeyboardKey.One)) { state = GridStates.Move; }
     if (Raylib.IsKeyPressed(KeyboardKey.Two)) { state = GridStates.Brush; }
     if (Raylib.IsKeyPressed(KeyboardKey.Three)) { state = GridStates.Erase; }
+    if (Raylib.IsKeyPressed(KeyboardKey.Four)) { state = GridStates.Inspect; }
 }
 
 void ControlSimulationWithKeyboard()
@@ -210,6 +258,9 @@ void ControlSimulationWithKeyboard()
 
 void SetGridMode()
 {
+    showHexCursor = false;
+    showInspectCursor = false;
+    showInspectWindow = false;
     switch (state)
     {
         case GridStates.Brush:
@@ -231,13 +282,62 @@ void SetGridMode()
             }
             break;
         case GridStates.Move:
-            showHexCursor = false;
             if (Raylib.IsMouseButtonDown(MouseButton.Left))
             {
                 MoveCameraWithMouse();
             }
             break;
+        case GridStates.Inspect:
+            showInspectCursor = true;
+            showInspectWindow = true;
+            break;
     }
+}
+
+void ShowInspectWindow()
+{
+    if (!simulation.Cells.TryGetValue(mouseHex, out Cell? cell)) return;
+
+    ImGui.SetNextWindowPos(ImGui.GetMousePos() + new Vector2(10, 10), ImGuiCond.Always);
+    if (ImGui.Begin("Inspector", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize))
+    {
+        ImGui.PushID("inspector");
+
+        ImGui.Text($"Position: {mouseHex}");
+        ImGui.Text($"Cell Type: {cell.cellType.name}");
+
+        ImGui.SeparatorText("Morphogens");
+
+        foreach (var morphogenPair in cell.Morphogens)
+        {
+            ImGui.PushID($"morphogen{morphogenPair.Key}");
+            int morphogenId = morphogenPair.Key;
+            var morphogenAmount = morphogenPair.Value;
+            ImGui.Text($"{simulation.GetMorphogen(morphogenId).name} : {morphogenAmount:F2}");
+            ImGui.PopID();
+        }
+
+        ImGui.SeparatorText("Genes");
+
+        foreach (var gene in cell.genes)
+        {
+            if (gene.ShouldBeActive(cell))
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.3f, 1f, 0.3f, 1f));
+            }
+            else
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.3f, 0.3f, 1f));
+            }
+            ImGui.PushID($"morphogen{gene.id}");
+            ImGui.Text($"{gene.name}");
+            ImGui.PopID();
+            ImGui.PopStyleColor();
+        }
+
+        ImGui.PopID();
+    }
+    ImGui.End();
 }
 
 HexCoords MouseToHex()
@@ -290,6 +390,7 @@ void GridEditor()
 {
     if (ImGui.Begin("Grid Editor", ImGuiWindowFlags.AlwaysAutoResize))
     {
+        ImGui.PushID("gridEditor");
         ImGui.SetWindowFontScale(scale);
         ImGui.Text($"{state} tool is selected");
         if (ImGui.RadioButton(IconFonts.FontAwesome6.ArrowsUpDownLeftRight + " Move", state == GridStates.Move))
@@ -308,54 +409,74 @@ void GridEditor()
         {
             state = GridStates.Erase;
         }
-        ImGui.SetColorEditOptions(ImGuiColorEditFlags.Float | ImGuiColorEditFlags.PickerHueWheel);
-        ImGui.ColorEdit3("Morphogen", ref palette);
-        if (ImGui.ColorButton("R", new Vector4(1f, 0f, 0f, 1f)))
+        if (ImGui.RadioButton(IconFonts.FontAwesome6.MagnifyingGlass + " Inspect", state == GridStates.Inspect))
         {
-            palette.X = 1 - palette.X;
-            if (ImGui.IsKeyDown(ImGuiKey.LeftShift)) { palette = new Vector3(1f, 0f, 0f); }
+            state = GridStates.Inspect;
         }
-        ImGui.SameLine();
-        if (ImGui.ColorButton("G", new Vector4(0f, 1f, 0f, 1f)))
+
+        if (simulationRenderer.redMorphogenId >= 0)
         {
-            palette.Y = 1 - palette.Y;
-            if (ImGui.IsKeyDown(ImGuiKey.LeftShift)) { palette = new Vector3(0f, 1f, 0f); }
+            var rMorph = simulation.GetMorphogen(simulationRenderer.redMorphogenId);
+            if (ImGui.ColorButton($"R ({rMorph.name})", new Vector4(1f, 0f, 0f, 1f)))
+            {
+                palette.X = 1 - palette.X;
+                if (ImGui.IsKeyDown(ImGuiKey.LeftShift)) { palette = new Vector3(1f, 0f, 0f); }
+            }
+            ImGui.SameLine();
+            ImGui.SliderFloat($"{rMorph.name}##r", ref palette.X, 0f, 1f);
         }
-        ImGui.SameLine();
-        if (ImGui.ColorButton("B", new Vector4(0f, 0f, 1f, 1f)))
+        else { palette.X = 0f; }
+
+        if (simulationRenderer.greenMorphogenId >= 0)
         {
-            palette.Z = 1 - palette.Z;
-            if (ImGui.IsKeyDown(ImGuiKey.LeftShift)) { palette = new Vector3(0f, 0f, 1f); }
+            var gMorph = simulation.GetMorphogen(simulationRenderer.greenMorphogenId);
+            if (ImGui.ColorButton($"G ({gMorph.name})", new Vector4(0f, 1f, 0f, 1f)))
+            {
+                palette.Y = 1 - palette.Y;
+                if (ImGui.IsKeyDown(ImGuiKey.LeftShift)) { palette = new Vector3(0f, 1f, 0f); }
+            }
+            ImGui.SameLine();
+            ImGui.SliderFloat($"{gMorph.name}##g", ref palette.Y, 0f, 1f);
         }
-        ImGui.SameLine();
+        else { palette.Y = 0f; }
+
+        if (simulationRenderer.blueMorphogenId >= 0)
+        {
+            var bMorph = simulation.GetMorphogen(simulationRenderer.blueMorphogenId);
+            if (ImGui.ColorButton($"B ({bMorph.name})", new Vector4(0f, 0f, 1f, 1f)))
+            {
+                palette.Z = 1 - palette.Z;
+                if (ImGui.IsKeyDown(ImGuiKey.LeftShift)) { palette = new Vector3(0f, 0f, 1f); }
+            }
+            ImGui.SameLine();
+            ImGui.SliderFloat($"{bMorph.name}##b", ref palette.Z, 0f, 1f);
+        }
+        else { palette.Z = 0f; }
+
+        ImGui.PopID();
     }
     ImGui.End();
 }
 
 void SaveLoadWindow()
 {
-    var folder = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "";
-    folder = Directory.GetParent(folder)!.FullName;
-    folder = Directory.GetParent(folder)!.FullName;
-    folder = Path.Combine(folder, "Simulations");
-
     if (ImGui.Begin("Save & Load", ImGuiWindowFlags.AlwaysAutoResize))
     {
         ImGui.SetWindowFontScale(scale);
-        if (ImGui.Button(FontAwesome6.Download + " Save"))
+        if (ImGui.Button(FontAwesome6.Upload + " Export"))
         {
-            var serialized = Serializer.Serialize(SimulationData.FromSimulation(simulation));
-
-            File.WriteAllText(Path.Combine(folder, $"{saveLoadPath}.json"), serialized);
+            saveLoadHandler.SaveSimulation(simulation, saveLoadPath);
         }
         ImGui.SameLine();
-        if (ImGui.Button(FontAwesome6.Upload + " Load"))
+        if (ImGui.Button(FontAwesome6.Download + " Import"))
         {
-            System.Console.WriteLine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
-
-            var deserialized = Serializer.Deserialize(File.ReadAllText(Path.Combine(folder, $"{saveLoadPath}.json")));
-            simulation = SimulationData.ToSimulation(deserialized);
+            simulation = saveLoadHandler.LoadSimulation(saveLoadPath);
             simulationRenderer.Simulation = simulation;
+
+            var morphogenIds = simulation.Morphogens.Keys.ToList();
+            if (morphogenIds.Count >= 0) simulationRenderer.redMorphogenId = morphogenIds[0]; else simulationRenderer.redMorphogenId = -1;
+            if (morphogenIds.Count >= 1) simulationRenderer.greenMorphogenId = morphogenIds[1]; else simulationRenderer.greenMorphogenId = -1;
+            if (morphogenIds.Count >= 2) simulationRenderer.blueMorphogenId = morphogenIds[2]; else simulationRenderer.blueMorphogenId = -1;
         }
         ImGui.InputText(".json", ref saveLoadPath, 64);
     }
@@ -364,8 +485,13 @@ void SaveLoadWindow()
 
 void ResetSimulation()
 {
-    simulationRenderer.Simulation = simulationRenderer.SetSampleSimulation();
-    simulationRenderer.morphogenIdForColors = new(0, 1, 2);
+    // simulationRenderer.Simulation = saveLoadHandler.LoadSimulation("default");
+    simulationRenderer.Simulation = new(0, "new");
+
+    simulationRenderer.redMorphogenId = -2;
+    simulationRenderer.greenMorphogenId = -1;
+    simulationRenderer.blueMorphogenId = 0;
+
     simulation = simulationRenderer.Simulation;
 }
 
@@ -373,5 +499,6 @@ enum GridStates
 {
     Move,
     Brush,
-    Erase
+    Erase,
+    Inspect
 }

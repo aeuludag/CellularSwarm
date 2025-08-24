@@ -5,6 +5,7 @@ using CellularSwarm.Core;
 public class HexRenderer
 {
     public float hexSize;
+    public Camera2D camera;
     public Vector2 offset;
     public bool showText;
 
@@ -34,17 +35,43 @@ public class HexRenderer
         // if (showText) Raylib.DrawText(text, (int)pos.X - 20, (int)pos.Y - 20, 15, new Color(255, 255, 255, 127));
     }
 
+    public void Render(int q, int r, Color fillColor)
+    {
+        float x = hexSize * q * 3 / 2;
+        float y = hexSize * (float)Math.Sqrt(3f) * (r + (q / 2f));
+        var pos = offset + new Vector2(x, -y);
+
+        Raylib.DrawPoly(pos, 6, hexSize, 0, fillColor);
+
+        // if (showText) Raylib.DrawText(text, (int)pos.X - 20, (int)pos.Y - 20, 15, new Color(255, 255, 255, 127));
+    }
+
+    public void Render(float x, float y, Color fillColor)
+    {
+        var pos = offset + new Vector2(x, -y);
+        Raylib.DrawPoly(pos, 6, hexSize, 0, fillColor);
+    }
+
     public void RenderFromSimulation(SimulationRenderer simulationRenderer)
     {
+        // int rendered = 0;
+        Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), camera);
+        Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight()), camera);
+
         var simulation = simulationRenderer.Simulation;
-        var morphogenIdForColors = simulationRenderer.morphogenIdForColors;
         var max = simulation.maxConcentration;
 
         foreach (var cellPair in simulation.Cells)
         {
-            float r = cellPair.Value.GetMorphogen((int)morphogenIdForColors.X);
-            float g = cellPair.Value.GetMorphogen((int)morphogenIdForColors.Y);
-            float b = cellPair.Value.GetMorphogen((int)morphogenIdForColors.Z);
+            float x = hexSize * cellPair.Key.q * 3 / 2;
+            float y = hexSize * (float)Math.Sqrt(3f) * (cellPair.Key.r + (cellPair.Key.q / 2f));
+            var pos = offset + new Vector2(x, -y);
+
+            if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
+
+            float r = simulationRenderer.redMorphogenId >= 0 ? cellPair.Value.GetMorphogenAmount(simulationRenderer.redMorphogenId) : 0;
+            float g = simulationRenderer.greenMorphogenId >= 0 ? cellPair.Value.GetMorphogenAmount(simulationRenderer.greenMorphogenId) : 0;
+            float b = simulationRenderer.blueMorphogenId >= 0 ? cellPair.Value.GetMorphogenAmount(simulationRenderer.blueMorphogenId) : 0;
 
             // string morphoText;
             // morphoText = string.Empty;
@@ -52,8 +79,12 @@ public class HexRenderer
             // morphoText = $"{cellPair.Key}";
 
             var morphoColor = new Color(r / max, g / max, b / max);
-            Render(cellPair.Key.q, cellPair.Key.r, morphoColor, morphoColor);
+            Render(x, y, morphoColor);
+            // rendered++;
         }
+        // Raylib.EndMode2D();
+        // Raylib.DrawText(rendered.ToString(), 5, 80, 20, Color.Blue);
+        // Raylib.BeginMode2D(camera);
     }
 
     public void RenderRectangle(HexCoords start, HexCoords end, Color fillColor, Color outlineColor)
@@ -88,5 +119,13 @@ public class HexRenderer
     HexCoords GoUp(HexCoords hexCoords)
     {
         return new HexCoords(hexCoords.q, hexCoords.r + 1);
+    }
+
+    bool IsOnScreen(Vector2 pos, float radius, Vector2 topLeft, Vector2 bottomRight)
+    {
+        return !(pos.X + radius < topLeft.X ||
+                 pos.X - radius > bottomRight.X ||
+                 pos.Y + radius < topLeft.Y ||
+                 pos.Y - radius > bottomRight.Y);
     }
 }

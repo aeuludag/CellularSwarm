@@ -42,7 +42,7 @@ public class DiffusionHandler
                 {
                     var neighbour = Simulation.Cells[neighbourCoords];
 
-                    var diff = morphogenConcentration - neighbour.GetMorphogen(morphogenId);
+                    var diff = morphogenConcentration - neighbour.GetMorphogenAmount(morphogenId);
 
                     if (diff <= diffusionThreshold) continue;
 
@@ -79,7 +79,7 @@ public class DiffusionHandler
                 var morphogenId = deltaPair.Key;
                 var delta = deltaPair.Value;
 
-                Simulation.Cells[coords].SetMorphogen(morphogenId, Simulation.Cells[coords].GetMorphogen(morphogenId) + delta);
+                Simulation.Cells[coords].SetMorphogen(morphogenId, Simulation.Cells[coords].GetMorphogenAmount(morphogenId) + delta);
             }
         }
     }
@@ -115,7 +115,7 @@ public class DiffusionHandler
                 var morphogenId = deltaPair.Key;
                 var delta = deltaPair.Value;
 
-                Simulation.Cells[cellCoords].SetMorphogen(morphogenId, Simulation.Cells[cellCoords].GetMorphogen(morphogenId) + delta);
+                Simulation.Cells[cellCoords].SetMorphogen(morphogenId, Simulation.Cells[cellCoords].GetMorphogenAmount(morphogenId) + delta);
             }
         }
 

@@ -48,7 +48,7 @@ public class ConcentrationCondition : GeneCondition
 
     public override bool IsMet(Cell cell)
     {
-        float concentration = cell.GetMorphogen(morphogenId);
+        float concentration = cell.GetMorphogenAmount(morphogenId);
 
         bool result = comparisonType switch
         {

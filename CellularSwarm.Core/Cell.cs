@@ -103,10 +103,11 @@ public class Cell
     {
         if (concentration <= 0) concentration = 0;
         if (concentration >= simulation.maxConcentration) concentration = simulation.maxConcentration;
+        if (!simulation.Morphogens.ContainsKey(id)) return;
         _morphogens[id] = concentration;
     }
 
-    public float GetMorphogen(int id)
+    public float GetMorphogenAmount(int id)
     {
         return _morphogens.GetValueOrDefault(id, 0);
     }
