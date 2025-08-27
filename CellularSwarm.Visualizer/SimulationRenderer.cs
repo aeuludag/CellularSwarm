@@ -126,11 +126,6 @@ public class SimulationRenderer
         if (greenMorphogenId >= 0) cell.SetMorphogen(greenMorphogenId, palette.Y);
         if (blueMorphogenId >= 0) cell.SetMorphogen(blueMorphogenId, palette.Z);
 
-        foreach (var gene in Simulation.Genes)
-        {
-            cell.genes.Add(gene.Value);
-        }
-
         Simulation.Cells.Add(coords, cell);
     }
 

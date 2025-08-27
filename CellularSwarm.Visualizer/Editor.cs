@@ -17,6 +17,14 @@ public class Editor
     public bool showSimulationEditor = false;
     private readonly static Random random = new();
     Dictionary<string, int> selectorStates = new(); // help by gpt
+    private readonly Vector4 RED_WARNING = new(0.9f, 0f, 0f, 1f);
+    private readonly Vector4 RED_LIGHT = new(1f, 0.7f, 0.7f, 1f);
+    private readonly Vector4 RED_DARK = new(0.7f, 0.2f, 0.2f, 1f);
+    private readonly Vector4 GREEN_LIGHT = new(0.7f, 1f, 0.7f, 1f);
+    private readonly Vector4 GREEN_DARK = new(0.2f, 0.7f, 0.2f, 1f);
+    private readonly Vector4 BLUE_LIGHT = new(0.7f, 0.7f, 1f, 1f);
+    private readonly Vector4 BLUE_DARK = new(0.3f, 0f, 0f, 1f);
+    private readonly Vector4 PURPLE_DARK = new(0.2f, 0.2f, 0.5f, 1f);
 
     public Editor(SimulationRenderer renderer)
     {
@@ -25,6 +33,8 @@ public class Editor
 
     public void ShowWindowManager()
     {
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(8, 8));
+
         if (ImGui.Begin("Window Manager", ImGuiWindowFlags.AlwaysAutoResize))
         {
             ImGui.Checkbox("Morphogen Editor", ref showMorphogenEditor);
@@ -33,20 +43,30 @@ public class Editor
             ImGui.Checkbox("Gene Condition Editor", ref showGeneConditionEditor);
             ImGui.Checkbox("Gene Editor", ref showGeneEditor);
             ImGui.Checkbox("Simulation Editor", ref showSimulationEditor);
-            if (ImGui.Button("Reset Window Positions"))
+            if (ImGui.Button("Hide All"))
+            {
+                showMorphogenEditor = false;
+                showCellTypeEditor = false;
+                showGeneActionEditor = false;
+                showGeneConditionEditor = false;
+                showGeneEditor = false;
+                showSimulationEditor = false;
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("Reset Windows"))
             {
 
             }
         }
         ImGui.End();
 
-        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(8, 8));
         if (showMorphogenEditor) ShowMorphogenEditor();
         if (showCellTypeEditor) ShowCellTypeEditor();
         if (showGeneActionEditor) ShowGeneActionEditor();
         if (showGeneConditionEditor) ShowGeneConditionEditor();
         if (showGeneEditor) ShowGeneEditor();
         if (showSimulationEditor) ShowSimulationEditor();
+
         ImGui.PopStyleVar();
     }
 
@@ -55,17 +75,23 @@ public class Editor
         var key = "cellTypeEditor";
         var simulation = renderer.Simulation;
         var cellTypes = simulation.CellTypes;
-        var cellTypeId = cellTypes.Keys.ToList()[0];
+        var cellTypeId = -1;
 
         if (ImGui.Begin("Cell Type Editor", ImGuiWindowFlags.AlwaysAutoResize))
         {
             ImGui.PushID(key);
-            if (ImGui.Button($"New"))
+
+            CloseButton(ref showCellTypeEditor);
+
+            ImGui.SameLine();
+
+            if (ImGui.Button($"New Cell Type"))
             {
                 var newId = simulation.Add(new CellType(simulation.DefaultCellType)).id;
                 selectorStates[key] = newId;
             }
-            ImGui.SameLine();
+            ImGui.Separator();
+
             cellTypeId = Selector(key, $"Cell Type", cellTypes.Keys.ToList(), (id) => cellTypes[id].name);
 
             ImGui.SeparatorText("Properties");
@@ -74,9 +100,35 @@ public class Editor
 
             var name = cellType.name;
 
-            ImGui.InputText($"Name", ref name, 32);
+            if (ImGui.InputText($"Name", ref name, 32)) { cellTypes[cellTypeId] = new CellType(cellTypeId, name); }
 
-            cellTypes[cellTypeId] = new CellType(cellTypeId, name);
+            List<string> referencedInConditions = new();
+            List<string> referencedInActions = new();
+
+            foreach (var condition in simulation.GeneConditions.Values)
+            {
+                if (condition is CellTypeCondition cellTypeCondition)
+                {
+                    if (cellTypeCondition.cellType == cellType) { referencedInConditions.Add(cellTypeCondition.name); }
+                }
+            }
+
+            foreach (var action in simulation.GeneActions.Values)
+            {
+                if (action.actionType == GeneAction.ActionType.ChangeCellType)
+                {
+                    if (action.cellTypeId == cellTypeId) { referencedInActions.Add(action.name); }
+                }
+            }
+
+            RemoveArea(cellTypes, cellTypeId, referencedInConditions.Count > 0 || referencedInActions.Count > 0, "Type");
+
+            InfoHeader(() =>
+            {
+                if (referencedInConditions.Count > 0) WrappingText($"Used in Conditions: {string.Join(", ", referencedInConditions)}");
+                if (referencedInActions.Count > 0) WrappingText($"Used in Actions: {string.Join(", ", referencedInActions)}");
+                ImGui.Text($"ID: {cellTypeId}");
+            });
 
             ImGui.PopID();
         }
@@ -88,19 +140,27 @@ public class Editor
         var key = "morphogenEditor";
         var simulation = renderer.Simulation;
         var morphogens = simulation.Morphogens;
-        var morphogenId = morphogens.Keys.ToList()[0];
+        var morphogenId = -1;
 
         if (ImGui.Begin("Morphogen Editor", ImGuiWindowFlags.AlwaysAutoResize))
         {
             ImGui.PushID(key);
 
-            if (ImGui.Button($"New"))
+            CloseButton(ref showMorphogenEditor);
+
+            ImGui.SameLine();
+
+            if (ImGui.Button($"New Morphogen"))
             {
                 var newId = simulation.Add(new Morphogen(simulation.DefaultMorphogen)).id;
                 morphogenId = newId;
                 selectorStates[key] = newId;
             }
-            ImGui.SameLine();
+
+            // if (morphogens.Count == 0) { ImGui.PopID(); ImGui.End(); return; }
+
+            ImGui.Separator();
+
             morphogenId = Selector(key, $"Morphogen", morphogens.Keys.ToList(), (id) => morphogens[id].name);
 
             ImGui.SeparatorText("Properties");
@@ -111,30 +171,46 @@ public class Editor
             var difFac = morphogen.diffusionFactor;
             var decFac = morphogen.decayFactor;
 
-            ImGui.InputText($"Name", ref name, 32);
-            ImGui.SliderFloat($"Diffusion Factor", ref difFac, 0f, 1f);
-            ImGui.SliderFloat($"Decay Factor", ref decFac, 0f, 1f);
+            if (ImGui.InputText($"Name", ref name, 32)) { morphogen.name = name; }
+            if (ImGui.SliderFloat($"Diffusion Factor", ref difFac, 0f, 1f)) { morphogen.diffusionFactor = difFac; }
+            HoverTooltip("How fast the morphogen flows & diffuses.");
+            if (ImGui.SliderFloat($"Decay Factor", ref decFac, 0f, 1f)) { morphogen.decayFactor = decFac; }
+            HoverTooltip("How fast the morphogen decays.");
 
-            morphogens[morphogenId].name = name;
-            morphogens[morphogenId].diffusionFactor = difFac;
-            morphogens[morphogenId].decayFactor = decFac;
+            List<string> referencedInConditions = new();
+            List<string> referencedInActions = new();
 
-            // if (morphogens.Count > 1)
-            // {
-            //     ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0f, 0f, 1f));
-            //     ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.5f, 0f, 0f, 1f));
-            //     ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.5f, 0f, 0f, 1f));
-            //     if (ImGui.Button($"Delete##{morphogenId}"))
-            //     {
-            //         simulation.RemoveMorphogen(morphogenId);
-            //     }
-            //     ImGui.PopStyleColor(3);
-            // }
+            foreach (var condition in simulation.GeneConditions.Values)
+            {
+                if (condition is ConcentrationCondition concentrationCondition)
+                {
+                    if (concentrationCondition.morphogenId == morphogenId) { referencedInConditions.Add(concentrationCondition.name); }
+                }
+            }
+
+            foreach (var action in simulation.GeneActions.Values)
+            {
+                if (action.actionType == GeneAction.ActionType.ChangeMorphogen)
+                {
+                    if (action.actionMorphogens.ContainsKey(morphogenId)) { referencedInActions.Add(action.name); }
+                }
+            }
+
+            ImGui.Separator();
+            RemoveArea(morphogens, morphogenId, referencedInConditions.Count > 0 || referencedInActions.Count > 0, "Morphogen");
+
+            InfoHeader(() =>
+            {
+                if (referencedInConditions.Count > 0) WrappingText($"Used in Conditions: {string.Join(", ", referencedInConditions)}");
+                if (referencedInActions.Count > 0) WrappingText($"Used in Actions: {string.Join(", ", referencedInActions)}");
+                ImGui.Text($"ID: {morphogenId}");
+            });
 
             ImGui.PopID();
         }
         ImGui.End();
     }
+
 
     public void ShowGeneActionEditor()
     {
@@ -150,13 +226,19 @@ public class Editor
         {
             ImGui.PushID(key);
 
-            if (ImGui.Button($"New"))
+            CloseButton(ref showGeneActionEditor);
+
+            ImGui.SameLine();
+
+            if (ImGui.Button($"New Action"))
             {
                 var newId = simulation.Add(new GeneAction(simulation.DefaultGeneAction)).id;
                 geneActionId = newId;
                 selectorStates[key] = newId;
             }
-            ImGui.SameLine();
+
+            ImGui.Separator();
+
             geneActionId = Selector(key, $"Gene Action", geneActions.Keys.ToList(), (id) => geneActions[id].name);
             ImGui.SeparatorText("Properties");
 
@@ -166,15 +248,17 @@ public class Editor
             var actionType = geneAction.actionType;
             var cellTypeId = geneAction.cellTypeId;
 
-            ImGui.InputText($"Name", ref name, 32);
+            if (ImGui.InputText($"Name", ref name, 32)) { geneAction.name = name; }
 
             actionType = (GeneAction.ActionType)Selector($"actionTypeSelector", $"Action Type",
             [0, 1, 2, 3], (id) => ActionTypeToString((GeneAction.ActionType)id), (int)actionType);
 
+            geneAction.actionType = actionType;
+
             switch (actionType)
             {
                 case GeneAction.ActionType.ChangeMorphogen:
-                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, max);
+                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, -max, max);
                     break;
                 case GeneAction.ActionType.Multiply:
                     DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name);
@@ -184,12 +268,25 @@ public class Editor
                     break;
                 case GeneAction.ActionType.ChangeCellType:
                     cellTypeId = Selector($"cellType", $"Cell Type", simulation.CellTypes.Keys.ToList(), (id) => simulation.CellTypes[id].name, cellTypeId);
+                    geneAction.cellTypeId = cellTypeId;
                     break;
             }
 
-            geneAction.actionType = actionType;
-            geneAction.cellTypeId = cellTypeId;
+            List<string> referencedInGenes = new();
 
+            foreach (var gene in simulation.Genes.Values)
+            {
+                if (gene.actions.Contains(geneAction)) { referencedInGenes.Add(gene.name); }
+            }
+
+            ImGui.Separator();
+            RemoveArea(geneActions, geneActionId, referencedInGenes.Count > 0, "Action");
+
+            InfoHeader(() =>
+            {
+                if (referencedInGenes.Count > 0) WrappingText($"Used in Genes: {string.Join(", ", referencedInGenes)}");
+                ImGui.Text($"ID: {geneActionId}");
+            });
             ImGui.PopID();
         }
         ImGui.End();
@@ -207,9 +304,12 @@ public class Editor
         {
             ImGui.PushID(key);
 
+            CloseButton(ref showGeneConditionEditor);
+
+            ImGui.SameLine();
             geneConditionTypeId = Selector($"type{key}", "##Condition Type", [0, 1, 2], GeneConditionTypeToString);
             ImGui.SameLine();
-            if (ImGui.Button($"New"))
+            if (ImGui.Button($"New Condition"))
             {
                 var newId = geneConditionTypeId switch
                 {
@@ -236,59 +336,131 @@ public class Editor
 
             ImGui.InputText($"Name", ref name, 32);
             ImGui.Checkbox($"Not", ref not);
+            HoverTooltip("Inverts the condition, e.g. \"Only work when cell type is *not* stem\"");
             ImGui.SameLine();
             ImGui.Dummy(new Vector2(10, 0));
             ImGui.SameLine();
             ImGui.Checkbox($"Strong", ref strong);
+            HoverTooltip("To activate / inhibit a gene, all strong conditions and at least one weak condition must be met.");
 
             if (geneCondition is ConcentrationCondition concentrationCondition)
             {
                 var comparisonType = concentrationCondition.comparisonType;
                 var morphogenId = concentrationCondition.morphogenId;
                 var thresholdConcentration = concentrationCondition.thresholdConcentration;
+                if (ImGui.BeginTable("##concentrationTable", 3))
+                {
+                    // ImGui.TableSetupColumn("Morphogen");
+                    // ImGui.TableSetupColumn("Comparison");
+                    // ImGui.TableSetupColumn("Threshold");
+                    // ImGui.TableHeadersRow();
+                    ImGui.TableNextRow();
 
-                morphogenId = Selector($"morphogenSelector", $"Morphogen", simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, morphogenId);
-                ImGui.SliderFloat($"threshold", ref thresholdConcentration, 0f, simulation.maxConcentration);
+                    ImGui.TableSetColumnIndex(0);
+                    ImGui.PushItemWidth(150);
+                    morphogenId = Selector($"morphogenSelector", $"##Morphogen", simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, morphogenId);
+                    ImGui.PopItemWidth();
 
-                comparisonType = (GeneCondition.ComparisonType)Selector($"comparisonTypeSelector", $"Comparison Type",
-                [0, 1, 2], (id) => ComparisonTypeToString((GeneCondition.ComparisonType)id), (int)comparisonType);
+                    ImGui.TableSetColumnIndex(1);
+                    ImGui.PushItemWidth(150);
+                    comparisonType = (GeneCondition.ComparisonType)Selector($"comparisonTypeSelector", $"##Comparison Type",
+                    [0, 1, 2], (id) => ComparisonTypeToString((GeneCondition.ComparisonType)id), (int)comparisonType);
+                    ImGui.PopItemWidth();
 
-                geneConditions[geneConditionId].name = name;
-                geneConditions[geneConditionId].not = not;
-                geneConditions[geneConditionId].strong = strong;
-                ((ConcentrationCondition)geneConditions[geneConditionId]).comparisonType = comparisonType;
-                ((ConcentrationCondition)geneConditions[geneConditionId]).morphogenId = morphogenId;
-                ((ConcentrationCondition)geneConditions[geneConditionId]).thresholdConcentration = thresholdConcentration;
+                    ImGui.TableSetColumnIndex(2);
+                    ImGui.PushItemWidth(150);
+                    ImGui.SliderFloat($"##Threshold", ref thresholdConcentration, 0f, simulation.maxConcentration);
+                    ImGui.PopItemWidth();
+                }
+                ImGui.EndTable();
+
+                concentrationCondition.name = name;
+                concentrationCondition.not = not;
+                concentrationCondition.strong = strong;
+                concentrationCondition.comparisonType = comparisonType;
+                concentrationCondition.morphogenId = morphogenId;
+                concentrationCondition.thresholdConcentration = thresholdConcentration;
+
+                // hilkat garibesi
+                var inEnglish = $"{(comparisonType == GeneCondition.ComparisonType.EqualsTo ?
+                $"Does {simulation.Morphogens[morphogenId].name} concentration{(not ? " not " : " ")}equal to {thresholdConcentration:F2}?" :
+                $"Is {simulation.Morphogens[morphogenId].name} concentration{(not ? " not " : " ")}{(comparisonType == GeneCondition.ComparisonType.GreaterThan ? "greater than" : "less than")} {thresholdConcentration:F2}?"
+                )}";
+
+                ImGui.TextWrapped(inEnglish);
 
             }
             else if (geneCondition is CellTypeCondition cellTypeCondition)
             {
                 var cellType = cellTypeCondition.cellType;
                 var cellTypeId = cellType.id;
+
                 cellTypeId = Selector($"cellType", $"Cell Type", simulation.CellTypes.Keys.ToList(), (id) => simulation.CellTypes[id].name, cellTypeId);
 
                 cellType = simulation.CellTypes[cellTypeId];
 
-                geneConditions[geneConditionId].name = name;
-                geneConditions[geneConditionId].not = not;
-                geneConditions[geneConditionId].strong = strong;
-                ((CellTypeCondition)geneConditions[geneConditionId]).cellType = cellType;
+                cellTypeCondition.name = name;
+                cellTypeCondition.not = not;
+                cellTypeCondition.strong = strong;
+                cellTypeCondition.cellType = cellType;
+
+                ImGui.TextWrapped($"Is cell type{(not ? " not " : " ")}{cellType.name}?");
             }
             else if (geneCondition is NeighbourCondition neighbourCondition)
             {
                 var comparisonType = neighbourCondition.comparisonType;
-                comparisonType = (GeneCondition.ComparisonType)Selector($"comparisonTypeSelector", $"Comparison Type",
-                [0, 1, 2], (id) => ComparisonTypeToString((GeneCondition.ComparisonType)id), (int)comparisonType);
                 var threshold = neighbourCondition.threshold;
 
-                ImGui.SliderInt("Neighbour Count", ref threshold, 0, 6);
+                if (ImGui.BeginTable("neighbourTable", 3))
+                {
+                    ImGui.TableNextRow();
 
-                geneConditions[geneConditionId].name = name;
-                geneConditions[geneConditionId].not = not;
-                geneConditions[geneConditionId].strong = strong;
-                ((NeighbourCondition)geneConditions[geneConditionId]).threshold = threshold;
-                ((NeighbourCondition)geneConditions[geneConditionId]).comparisonType = comparisonType;
+                    ImGui.TableSetColumnIndex(0);
+                    ImGui.PushItemWidth(150);
+                    ImGui.Text("Neighbour Count");
+                    ImGui.PopItemWidth();
+
+                    ImGui.TableSetColumnIndex(1);
+                    ImGui.PushItemWidth(150);
+                    comparisonType = (GeneCondition.ComparisonType)Selector($"comparisonTypeSelector", $"##Comparison Type",
+                    [0, 1, 2], (id) => ComparisonTypeToString((GeneCondition.ComparisonType)id), (int)comparisonType);
+                    ImGui.PopItemWidth();
+
+                    ImGui.TableSetColumnIndex(2);
+                    ImGui.PushItemWidth(100);
+                    ImGui.SliderInt("##Neighbour Count", ref threshold, 0, 6);
+                    ImGui.PopItemWidth();
+                }
+                ImGui.EndTable();
+
+                neighbourCondition.name = name;
+                neighbourCondition.not = not;
+                neighbourCondition.strong = strong;
+                neighbourCondition.threshold = threshold;
+                neighbourCondition.comparisonType = comparisonType;
+
+                var inEnglish = $"{(comparisonType == GeneCondition.ComparisonType.EqualsTo ?
+                $"Does neighbour count{(not ? " not " : " ")}equal to {threshold}?" :
+                $"Is neighbour count{(not ? " not " : " ")}{(comparisonType == GeneCondition.ComparisonType.GreaterThan ? "greater than" : "less than")} {threshold}?"
+                )}";
+                ImGui.TextWrapped(inEnglish);
             }
+
+            List<string> referencedInGenes = new();
+
+            foreach (var gene in simulation.Genes.Values)
+            {
+                if (gene.activatorConditions.Contains(geneCondition) || gene.inhibitorConditions.Contains(geneCondition)) { referencedInGenes.Add(gene.name); }
+            }
+
+            ImGui.Separator();
+            RemoveArea(geneConditions, geneConditionId, referencedInGenes.Count > 0, "Condition");
+
+            InfoHeader(() =>
+            {
+                if (referencedInGenes.Count > 0) WrappingText($"Used in Genes: {string.Join(", ", referencedInGenes)}");
+                ImGui.Text($"ID: {geneConditionId}");
+            });
             ImGui.PopID();
         }
         ImGui.End();
@@ -300,19 +472,25 @@ public class Editor
         var simulation = renderer.Simulation;
         var genes = simulation.Genes;
         var geneConditions = simulation.GeneConditions.Values.ToList();
+        var geneActions = simulation.GeneActions.Values.ToList();
         var geneId = genes.Keys.ToList()[0];
 
         if (ImGui.Begin("Gene Editor", ImGuiWindowFlags.AlwaysAutoResize))
         {
             ImGui.PushID(key);
 
-            if (ImGui.Button($"New"))
+            CloseButton(ref showGeneEditor);
+
+            ImGui.SameLine();
+
+            if (ImGui.Button($"New Gene"))
             {
                 var newId = simulation.Add(new Gene(simulation.DefaultGene)).id;
                 geneId = newId;
                 selectorStates[key] = newId;
             }
-            ImGui.SameLine();
+            ImGui.Separator();
+
             geneId = Selector(key, $"Gene", genes.Keys.ToList(), (id) => genes[id].name);
 
             var gene = genes[geneId];
@@ -320,19 +498,37 @@ public class Editor
 
             ImGui.SeparatorText("Properties");
 
-            ImGui.InputText($"Name", ref name, 32);
+            if (ImGui.InputText($"Name", ref name, 32)) { gene.name = name; }
 
-            ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(0.7f, 1f, 0.7f, 1f));
-            ImGui.SeparatorText("Activator Conditions");
-            ListEditor($"activator##{key}", "Activator Conditions", gene.activatorConditions, geneConditions, (condition) => condition.name);
+            ImGui.PushStyleColor(ImGuiCol.Header, GREEN_DARK);
+            // ImGui.SeparatorText("Activator Conditions");
+            if (ImGui.CollapsingHeader("Activator Conditions"))
+            {
+                ListEditor($"activator##{key}", "Activator Conditions", gene.activatorConditions, geneConditions, (condition) => condition.name);
+            }
             ImGui.PopStyleColor();
 
-            ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(1f, 0.7f, 0.7f, 1f));
-            ImGui.SeparatorText("Inhibitor Conditions");
-            ListEditor($"inhibitor##{key}", "Inhibitor Conditions", gene.inhibitorConditions, geneConditions, (condition) => condition.name);
+            ImGui.PushStyleColor(ImGuiCol.Header, RED_DARK);
+            if (ImGui.CollapsingHeader("Inhibitor Conditions"))
+            {
+                ListEditor($"inhibitor##{key}", "Inhibitor Conditions", gene.inhibitorConditions, geneConditions, (condition) => condition.name);
+            }
             ImGui.PopStyleColor();
 
-            genes[geneId].name = name;
+            ImGui.PushStyleColor(ImGuiCol.Header, PURPLE_DARK);
+            if (ImGui.CollapsingHeader("Actions"))
+            {
+                ListEditor($"action##{key}", "Actions", gene.actions, geneActions, (action) => action.name);
+            }
+            ImGui.PopStyleColor();
+
+            ImGui.Separator();
+            RemoveArea(genes, geneId, false, "Gene");
+
+            InfoHeader(() =>
+            {
+                ImGui.Text($"ID: {geneId}");
+            });
 
             ImGui.PopID();
         }
@@ -350,6 +546,9 @@ public class Editor
         {
             ImGui.PushID(key);
 
+            CloseButton(ref showSimulationEditor);
+            ImGui.Separator();
+
             var name = simulation.name;
             var diffusionSteps = simulation.diffusionSteps;
 
@@ -358,10 +557,10 @@ public class Editor
 
             ImGui.SeparatorText("Properties");
 
-            ImGui.InputText("Name", ref name, 32);
-            ImGui.InputFloat("Diffusion Threshold", ref diffusionThreshold);
-            ImGui.InputFloat("Diffusion Factor", ref diffusionFactor);
-            ImGui.InputInt("Diffusion Steps", ref diffusionSteps);
+            if (ImGui.InputText("Name", ref name, 32)) { simulation.name = name; }
+            if (ImGui.InputFloat("Diffusion Threshold", ref diffusionThreshold)) { diffuser.diffusionThreshold = Math.Max(0, diffusionThreshold); }
+            if (ImGui.InputFloat("Diffusion Factor", ref diffusionFactor)) { diffuser.diffusionFactor = Math.Max(0, diffusionFactor); }
+            if (ImGui.InputInt("Diffusion Steps", ref diffusionSteps)) { simulation.diffusionSteps = Math.Max(0, diffusionSteps); }
 
             ImGui.SeparatorText("Visualization");
 
@@ -371,15 +570,15 @@ public class Editor
             morphogenKeys.Remove(renderer.greenMorphogenId);
             morphogenKeys.Remove(renderer.blueMorphogenId);
 
-            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.7f, 0.7f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Text, RED_LIGHT);
             renderer.redMorphogenId = SoftSelector("redMorphogen", "Red", morphogenKeys, (id) => morphogens[id].name, renderer.redMorphogenId);
             ImGui.PopStyleColor();
 
-            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.7f, 1f, 0.7f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Text, GREEN_LIGHT);
             renderer.greenMorphogenId = SoftSelector("greenMorphogen", "Green", morphogenKeys, (id) => morphogens[id].name, renderer.greenMorphogenId);
             ImGui.PopStyleColor();
 
-            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.7f, 0.7f, 1f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Text, BLUE_LIGHT);
             renderer.blueMorphogenId = SoftSelector("blueMorphogen", "Blue", morphogenKeys, (id) => morphogens[id].name, renderer.blueMorphogenId);
             ImGui.PopStyleColor();
 
@@ -389,15 +588,12 @@ public class Editor
             ImGui.Text($"Cell Count: {simulation.Cells.Count}");
             ImGui.EndDisabled();
 
-            simulation.name = name;
-            simulation.diffusionSteps = Math.Max(diffusionSteps, 0);
-            diffuser.diffusionThreshold = Math.Max(diffusionThreshold, 0);
-            diffuser.diffusionFactor = Math.Max(diffusionFactor, 0);
-
             ImGui.PopID();
         }
         ImGui.End();
     }
+
+    // GENERICS
 
     int Selector(string key, string label, List<int> items, Func<int, string> getName, int? defaultItem = null)
     {
@@ -419,7 +615,7 @@ public class Editor
 
         string preview = (current >= 0) ? getName(current) : "None";
         //  $"{label} - ({current})" OR $"{label}"
-        if (ImGui.BeginCombo($"{label} - ({current})", preview))
+        if (ImGui.BeginCombo($"{label}", preview))
         {
             foreach (var id in items)
             {
@@ -456,7 +652,8 @@ public class Editor
         int current = selectorStates[key];
 
         string preview = (current >= 0) ? getName(current) : "None";
-        if (ImGui.BeginCombo($"{label} - ({current})", preview))
+        //  $"{label} - ({current})" OR $"{label}"
+        if (ImGui.BeginCombo($"{label}", preview))
         {
             foreach (var id in items)
             {
@@ -473,7 +670,7 @@ public class Editor
         return selectorStates[key];
     }
 
-    void DictionaryFloatEditor(string key, string label, Dictionary<int, float> dict, List<int> allItems, Func<int, string> getName, float max = 1f)
+    void DictionaryFloatEditor(string key, string label, Dictionary<int, float> dict, List<int> allItems, Func<int, string> getName, float min = 0f, float max = 1f)
     {
         ImGui.PushID(key);
         // mostly gpt written
@@ -496,11 +693,11 @@ public class Editor
 
                 ImGui.TableSetColumnIndex(1);
                 ImGui.PushItemWidth(200);
-                if (ImGui.SliderFloat("##value", ref value, 0f, max)) dict[dictKey] = value;
+                if (ImGui.SliderFloat("##value", ref value, min, max)) dict[dictKey] = value;
                 ImGui.PopItemWidth();
 
                 ImGui.TableSetColumnIndex(2);
-                if (ImGui.SmallButton(IconFonts.FontAwesome6.TrashCan + " Remove")) dict.Remove(dictKey);
+                if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Remove")) dict.Remove(dictKey);
 
                 ImGui.PopID();
             }
@@ -579,6 +776,41 @@ public class Editor
         ImGui.PopID();
     }
 
+    void RemoveArea<T>(Dictionary<int, T> dictToRemoveFrom, int id, bool isReferenced, string name)
+    {
+        var simulation = renderer.Simulation;
+        RedButton(() =>
+        {
+            var isGridEmpty = simulation.Cells.Count == 0;
+            var isLast = dictToRemoveFrom.Count == 1;
+            var canDelete = !isReferenced && isGridEmpty && !isLast;
+            if (ImGui.BeginChild("removalArea", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())))
+            {
+                if (!canDelete) ImGui.BeginDisabled();
+                if (ImGui.Button($"Delete {name}"))
+                {
+                    dictToRemoveFrom.Remove(id);
+                }
+                if (!canDelete) ImGui.EndDisabled();
+                // if (!canDelete)
+                // {
+                //     ImGui.SameLine();
+                //     ImGui.TextColored(RED_WARNING, "Can't delete this now.");
+                // }
+            }
+            ImGui.EndChild();
+            if (!canDelete && ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextColored(RED_WARNING, "Can't delete this now.");
+                if (isReferenced) ImGui.BulletText($"{name} is still used (see Info).");
+                if (!isGridEmpty) ImGui.BulletText($"Grid must be cleared first.");
+                if (isLast) ImGui.BulletText($"At least one {name} should remain.");
+                ImGui.EndTooltip();
+            }
+        });
+    }
+
     string ActionTypeToString(GeneAction.ActionType actionType)
     {
         return actionType switch
@@ -597,7 +829,7 @@ public class Editor
         {
             GeneCondition.ComparisonType.GreaterThan => "Greater Than (>)",
             GeneCondition.ComparisonType.LessThan => "Less Than (<)",
-            GeneCondition.ComparisonType.EqualsTo => "Equal To (=)",
+            GeneCondition.ComparisonType.EqualsTo => "Equals To (=)",
             _ => "",
         };
     }
@@ -616,5 +848,53 @@ public class Editor
     void Space(int space = 5)
     {
         ImGui.Dummy(new Vector2(0, space));
+    }
+
+    void WrappingText(string text)
+    {
+        ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+        ImGui.TextUnformatted(text);
+        ImGui.PopTextWrapPos();
+    }
+
+    void InfoHeader(Action content, string label = "Info")
+    {
+        if (ImGui.CollapsingHeader(label))
+        {
+            ImGui.BeginDisabled();
+            content();
+            ImGui.EndDisabled();
+        }
+    }
+
+    void CloseButton(ref bool toFalse)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0f, 0f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.5f, 0f, 0f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.5f, 0f, 0f, 1f));
+        if (ImGui.Button($"Close"))
+        {
+            toFalse = false;
+        }
+        ImGui.PopStyleColor(3);
+    }
+
+    void RedButton(Action content)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0f, 0f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.5f, 0f, 0f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.5f, 0f, 0f, 1f));
+        content();
+        ImGui.PopStyleColor(3);
+    }
+
+    void HoverTooltip(string text)
+    {
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.Text(text);
+            ImGui.EndTooltip();
+        }
     }
 }

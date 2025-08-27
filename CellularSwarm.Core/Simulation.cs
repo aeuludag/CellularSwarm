@@ -40,7 +40,7 @@ public class Simulation
         DefaultGeneAction = new GeneAction(0, GeneAction.ActionType.Multiply, "New Gene Action");
         DefaultConcentrationCondition = new ConcentrationCondition(0, false, false, 0, 10f, GeneCondition.ComparisonType.GreaterThan, "New Concentration Condition");
         DefaultCellTypeCondition = new CellTypeCondition(0, false, false, DefaultCellType, "New Cell Type Condition");
-        DefaultNeighbourCondition = new NeighbourCondition(0, false, false, 3, GeneCondition.ComparisonType.GreaterThan, "New Neighbour Condition");
+        DefaultNeighbourCondition = new NeighbourCondition(0, false, false, 1, GeneCondition.ComparisonType.GreaterThan, "New Neighbour Condition");
         DefaultGeneCondition = DefaultNeighbourCondition.Clone();
         DefaultGene = new Gene(0, "New Gene", [], [], []);
 
@@ -62,6 +62,30 @@ public class Simulation
         return neighbours;
     }
 
+    public HexCoords?[] GetNeighboursArray(HexCoords coords)
+    {
+        var neighbours = new HexCoords?[6];
+        var neighbouringTiles = coords.GetNeighbouringCoords();
+        for (int i = 0; i < 6; i++)
+        {
+            if (Cells.ContainsKey(neighbouringTiles[i])) { neighbours[i] = neighbouringTiles[i]; } else { neighbours[i] = null; }
+        }
+        return neighbours;
+    }
+
+    public int GetNeighbourCount(HexCoords coords)
+    {
+        int n = 0;
+        var neighbouringTiles = coords.GetNeighbouringCoords();
+
+        for (int i = 0; i < 6; i++)
+        {
+            if (Cells.ContainsKey(neighbouringTiles[i])) { n++; }
+        }
+
+        return n;
+    }
+
     public Dictionary<HexCoords, Cell> Step()
     {
         List<HexCoords> cellsToMultiply = new();
@@ -72,7 +96,7 @@ public class Simulation
             var coords = cellPair.Key;
             var cell = cellPair.Value;
 
-            cell.neighbourCount = GetNeighbours(coords).Count;
+            cell.neighbourCount = GetNeighbourCount(coords);
 
             cell.Step();
 

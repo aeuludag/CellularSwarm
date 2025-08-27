@@ -24,7 +24,7 @@ public class Gene
     {
         id = gene.id;
         name = gene.name;
-        actions = gene.actions;
+        actions = new(gene.actions);
         activatorConditions = new(gene.activatorConditions);
         inhibitorConditions = new(gene.inhibitorConditions);
     }

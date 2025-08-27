@@ -4,7 +4,6 @@ public class Cell
 {
     public Simulation simulation;
     public CellType cellType;
-    public List<Gene> genes = new();
     private Dictionary<int, float> _morphogens = new();
     public Dictionary<int, float> Morphogens
     {
@@ -15,18 +14,16 @@ public class Cell
     public bool shouldApoptosis;
     private GeneAction? _currentMultiplyAction;
 
-    public Cell(Simulation simulation, CellType type, List<Gene> genes, Dictionary<int, float> morphogens)
+    public Cell(Simulation simulation, CellType type, Dictionary<int, float> morphogens)
     {
         this.cellType = type;
-        this.genes = genes;
         this._morphogens = morphogens;
         this.simulation = simulation;
     }
 
-    public Cell(Simulation simulation, int cellTypeID, List<int> geneIDs)
+    public Cell(Simulation simulation, int cellTypeID)
     {
         this.cellType = simulation.CellTypes[cellTypeID];
-        this.genes = geneIDs.Select(id => simulation.Genes[id]).ToList();
         this.simulation = simulation;
     }
 
@@ -40,7 +37,6 @@ public class Cell
     {
         simulation = cell.simulation;
         cellType = cell.cellType;
-        genes = new(cell.genes);
         _morphogens = new(cell.Morphogens);
     }
 
@@ -61,6 +57,7 @@ public class Cell
     public List<GeneAction> GetAvailableActions()
     {
         List<GeneAction> actions = new();
+        var genes = simulation.Genes.Values;
 
         foreach (Gene gene in genes)
         {
@@ -90,6 +87,9 @@ public class Cell
                 if (neighbourCount == 6) break;
                 _currentMultiplyAction = action;
                 shouldMultiply = true;
+                break;
+            case GeneAction.ActionType.ChangeCellType:
+                cellType = simulation.CellTypes[action.cellTypeId];
                 break;
         }
     }
@@ -134,7 +134,7 @@ public class Cell
             _morphogens[morphogenPair.Key] *= 1 - morphogenShare.GetValueOrDefault(morphogenPair.Key, 0.5f);
         }
 
-        return new Cell(simulation, cellType, genes, newMorphogens);
+        return new Cell(simulation, cellType, newMorphogens);
     }
 }
 public struct CellType

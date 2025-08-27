@@ -7,8 +7,6 @@ public class CellData
 {
     // [JsonProperty("ct")]
     public int cellTypeID;
-    // [JsonProperty("g")]
-    public List<int> geneIDs = new();
     // [JsonProperty("m")]
     public Dictionary<int, float> morphogens = new();
 
@@ -17,7 +15,6 @@ public class CellData
         return new CellData
         {
             cellTypeID = cell.cellType.id,
-            geneIDs = cell.genes.Select(g => g.id).ToList(),
             morphogens = cell.Morphogens.ToDictionary(m => m.Key, m => m.Value)
         };
     }
@@ -25,8 +22,7 @@ public class CellData
     public static Cell ToCell(Simulation simulation, CellData data)
     {
         var cellType = simulation.CellTypes[data.cellTypeID];
-        var genes = data.geneIDs.Select(id => simulation.Genes[id]).ToList();
-        return new Cell(simulation, cellType, genes, data.morphogens);
+        return new Cell(simulation, cellType, data.morphogens);
     }
 }
 

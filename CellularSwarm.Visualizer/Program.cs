@@ -7,7 +7,7 @@ using IconFonts;
 using CellularSwarm.Core;
 using CellularSwarm.Visualizer;
 
-int width = 1200;
+int width = 1500;
 int height = 900;
 
 bool isFullScreen = false;
@@ -18,6 +18,7 @@ float hexSize = 50f;
 
 Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
 Raylib.InitWindow(width, height, "Cellular Swarm");
+Raylib.SetWindowPosition(0, 0);
 Raylib.SetWindowMinSize(400, 400);
 Raylib.SetTargetFPS(60);
 
@@ -30,7 +31,6 @@ renderer.showText = false;
 var backRenderer = new HexRenderer();
 backRenderer.hexSize = hexSize;
 backRenderer.showText = false;
-
 
 var camera = new Camera2D();
 var center = new Vector2(Raylib.GetScreenWidth() / 2, Raylib.GetScreenHeight() / 2);
@@ -99,7 +99,7 @@ while (!Raylib.WindowShouldClose())
 
     if (camera.Zoom >= 0.3f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, Color.DarkGray);
 
-    renderer.RenderFromSimulation(simulationRenderer);
+    renderer.RenderFromSimulationRGB(simulationRenderer);
 
     // renderer.Render(bottomLeft.q, bottomLeft.r, new Color(255, 0, 0, 100), new Color(0, 0, 255, 100), "BL");
     // renderer.Render(topRight.q, topRight.r, new Color(255, 0, 0, 100), new Color(0, 0, 255, 100), "TR");
@@ -204,16 +204,16 @@ void ToggleFullscreen()
 void SetZoomWithMouse()
 {
     float scroll = Raylib.GetMouseWheelMove();
+    if (scroll == 0f) return;
+
+    var mousePosBefore = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
+
     float scrollAmount = Math.Clamp(scroll * 0.1f, -0.2f, +0.2f);
     camera.Zoom *= 1f + scrollAmount;
-    // if (scroll > float.Epsilon)
-    // {
-    //     camera.Zoom *= 1.1f;
-    // }
-    // else if (scroll < -float.Epsilon)
-    // {
-    //     camera.Zoom *= 0.9f;
-    // }
+
+    var mousePosAfter = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
+
+    camera.Target += mousePosBefore - mousePosAfter;
 }
 
 void MoveCamera()
@@ -296,12 +296,18 @@ void SetGridMode()
 
 void ShowInspectWindow()
 {
-    if (!simulation.Cells.TryGetValue(mouseHex, out Cell? cell)) return;
 
     ImGui.SetNextWindowPos(ImGui.GetMousePos() + new Vector2(10, 10), ImGuiCond.Always);
-    if (ImGui.Begin("Inspector", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize))
+    if (ImGui.Begin("Inspector", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing))
     {
         ImGui.PushID("inspector");
+
+        if (!simulation.Cells.TryGetValue(mouseHex, out Cell? cell))
+        {
+            ImGui.Text($"Position: {mouseHex}");
+            ImGui.TextDisabled("No cell here.");
+            ImGui.PopID(); ImGui.End(); return;
+        }
 
         ImGui.Text($"Position: {mouseHex}");
         ImGui.Text($"Cell Type: {cell.cellType.name}");
@@ -319,7 +325,7 @@ void ShowInspectWindow()
 
         ImGui.SeparatorText("Genes");
 
-        foreach (var gene in cell.genes)
+        foreach (var gene in simulation.Genes.Values)
         {
             if (gene.ShouldBeActive(cell))
             {
@@ -373,6 +379,7 @@ void Controls()
             play = false;
             simulation.Step();
         }
+        ImGui.SameLine();
         if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Clear"))
         {
             simulationRenderer.ClearGrid();
@@ -488,9 +495,9 @@ void ResetSimulation()
     // simulationRenderer.Simulation = saveLoadHandler.LoadSimulation("default");
     simulationRenderer.Simulation = new(0, "new");
 
-    simulationRenderer.redMorphogenId = -2;
+    simulationRenderer.redMorphogenId = -1;
     simulationRenderer.greenMorphogenId = -1;
-    simulationRenderer.blueMorphogenId = 0;
+    simulationRenderer.blueMorphogenId = -1;
 
     simulation = simulationRenderer.Simulation;
 }

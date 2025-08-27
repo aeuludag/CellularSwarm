@@ -52,7 +52,7 @@ public class HexRenderer
         Raylib.DrawPoly(pos, 6, hexSize, 0, fillColor);
     }
 
-    public void RenderFromSimulation(SimulationRenderer simulationRenderer)
+    public void RenderFromSimulationRGB(SimulationRenderer simulationRenderer)
     {
         // int rendered = 0;
         Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), camera);
