@@ -38,9 +38,9 @@ public class Simulation
         DefaultCellType = new CellType(0, "New Cell Type");
         DefaultMorphogen = new Morphogen(0, "New Morphogen", 1f, 0.1f);
         DefaultGeneAction = new GeneAction(0, GeneAction.ActionType.Multiply, "New Gene Action");
-        DefaultConcentrationCondition = new ConcentrationCondition(0, false, false, 0, 10f, GeneCondition.ComparisonType.GreaterThan, "New Concentration Condition");
-        DefaultCellTypeCondition = new CellTypeCondition(0, false, false, DefaultCellType, "New Cell Type Condition");
-        DefaultNeighbourCondition = new NeighbourCondition(0, false, false, 1, GeneCondition.ComparisonType.GreaterThan, "New Neighbour Condition");
+        DefaultConcentrationCondition = new ConcentrationCondition(0, false, 0, 10f, GeneCondition.ComparisonType.GreaterThan, "New Concentration Condition");
+        DefaultCellTypeCondition = new CellTypeCondition(0, false, DefaultCellType, "New Cell Type Condition");
+        DefaultNeighbourCondition = new NeighbourCondition(0, false, 1, GeneCondition.ComparisonType.GreaterThan, "New Neighbour Condition");
         DefaultGeneCondition = DefaultNeighbourCondition.Clone();
         DefaultGene = new Gene(0, "New Gene", [], [], []);
 

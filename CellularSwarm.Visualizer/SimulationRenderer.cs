@@ -46,19 +46,19 @@ public class SimulationRenderer
             new Dictionary<int, float>() { { 0, 10f } }, "Generate Red"));
 
         simulation.GeneConditions.Add(0,
-            new ConcentrationCondition(0, strong: false, not: false, 1, 40f, GeneCondition.ComparisonType.GreaterThan, "Liveogen To Multiply"));
+            new ConcentrationCondition(0, not: false, 1, 40f, GeneCondition.ComparisonType.GreaterThan, "Liveogen To Multiply"));
         simulation.GeneConditions.Add(1,
-            new ConcentrationCondition(1, strong: false, not: false, 0, 60f, GeneCondition.ComparisonType.GreaterThan, "Dieogen To Prevent"));
+            new ConcentrationCondition(1, not: false, 0, 60f, GeneCondition.ComparisonType.GreaterThan, "Dieogen To Prevent"));
         simulation.GeneConditions.Add(2,
-            new ConcentrationCondition(2, strong: false, not: false, 0, 80f, GeneCondition.ComparisonType.GreaterThan, "Dieogen To Kill"));
+            new ConcentrationCondition(2, not: false, 0, 80f, GeneCondition.ComparisonType.GreaterThan, "Dieogen To Kill"));
         simulation.GeneConditions.Add(3,
-            new CellTypeCondition(3, strong: true, not: false, simulation.CellTypes[0], "Is Stem Cell Type"));
+            new CellTypeCondition(3, not: false, simulation.CellTypes[0], "Is Stem Cell Type"));
         simulation.GeneConditions.Add(4,
-            new ConcentrationCondition(4, strong: false, not: false, 2, 10f, GeneCondition.ComparisonType.GreaterThan, "Has Stem"));
+            new ConcentrationCondition(4, not: false, 2, 10f, GeneCondition.ComparisonType.GreaterThan, "Has Stem"));
         simulation.GeneConditions.Add(5,
-            new ConcentrationCondition(5, strong: true, not: false, 1, 30f, GeneCondition.ComparisonType.LessThan, "Dieogen Generator"));
+            new ConcentrationCondition(5, not: false, 1, 30f, GeneCondition.ComparisonType.LessThan, "Dieogen Generator"));
         simulation.GeneConditions.Add(6,
-            new NeighbourCondition(6, strong: false, not: false, 6, GeneCondition.ComparisonType.LessThan, "Edgy"));
+            new NeighbourCondition(6, not: false, 6, GeneCondition.ComparisonType.LessThan, "Edgy"));
 
 
         simulation.Genes.Add(0, new Gene(

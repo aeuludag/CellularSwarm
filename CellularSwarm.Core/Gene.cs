@@ -38,30 +38,15 @@ public class Gene
 
     public static bool NecessaryConditionsMet(List<GeneCondition> conditions, Cell cell)
     {
-        bool weakConditionsMet = false;
-        bool weakConditionExists = false;
-        bool strongConditionsMet = true;
-        bool strongConditionExists = false;
+        bool conditionsMet = true;
 
         if (conditions.Count == 0) { return false; }
 
         foreach (GeneCondition condition in conditions)
         {
-            if (condition.strong)
-            {
-                strongConditionExists = true;
-                strongConditionsMet &= condition.IsMet(cell);
-            }
-            else
-            {
-                weakConditionExists = true;
-                weakConditionsMet |= condition.IsMet(cell);
-            }
+            conditionsMet &= condition.IsMet(cell);
         }
 
-        bool strongs = !strongConditionExists || strongConditionsMet; // only false when StrongConditionExists and its not met (p -> q)
-        bool weaks = !weakConditionExists || weakConditionsMet; // only false when WeakConditionExists and its not met (p -> q)
-
-        return strongs && weaks;
+        return conditionsMet;
     }
 }

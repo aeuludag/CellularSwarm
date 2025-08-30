@@ -4,7 +4,6 @@ public abstract class GeneCondition
 {
     public int id;
     public string name = string.Empty;
-    public bool strong; // All strong conditions and at least one weak condition must be met.
     public bool not;
 
     public abstract bool IsMet(Cell cell);
@@ -24,11 +23,10 @@ public class ConcentrationCondition : GeneCondition
     public float thresholdConcentration;
     public ComparisonType comparisonType;
 
-    public ConcentrationCondition(int id, bool strong, bool not, int morphogenId, float thresholdConcentration, ComparisonType comparisonType, string name = "")
+    public ConcentrationCondition(int id, bool not, int morphogenId, float thresholdConcentration, ComparisonType comparisonType, string name = "")
     {
         this.id = id;
         this.name = name;
-        this.strong = strong;
         this.not = not;
         this.morphogenId = morphogenId;
         this.thresholdConcentration = thresholdConcentration;
@@ -39,7 +37,6 @@ public class ConcentrationCondition : GeneCondition
     {
         this.id = condition.id;
         this.name = condition.name;
-        this.strong = condition.strong;
         this.not = condition.not;
         this.morphogenId = morphogenId;
         this.thresholdConcentration = thresholdConcentration;
@@ -63,7 +60,7 @@ public class ConcentrationCondition : GeneCondition
 
     public override GeneCondition Clone()
     {
-        return new ConcentrationCondition(id, strong, not, morphogenId, thresholdConcentration, comparisonType, name);
+        return new ConcentrationCondition(id, not, morphogenId, thresholdConcentration, comparisonType, name);
     }
 }
 
@@ -71,11 +68,10 @@ public class CellTypeCondition : GeneCondition
 {
     public CellType cellType;
 
-    public CellTypeCondition(int id, bool strong, bool not, CellType cellType, string name = "")
+    public CellTypeCondition(int id, bool not, CellType cellType, string name = "")
     {
         this.id = id;
         this.name = name;
-        this.strong = strong;
         this.not = not;
         this.cellType = cellType;
     }
@@ -84,7 +80,6 @@ public class CellTypeCondition : GeneCondition
     {
         this.id = condition.id;
         this.name = condition.name;
-        this.strong = condition.strong;
         this.not = condition.not;
         this.cellType = cellType;
     }
@@ -96,7 +91,7 @@ public class CellTypeCondition : GeneCondition
 
     public override GeneCondition Clone()
     {
-        return new CellTypeCondition(id, strong, not, cellType, name);
+        return new CellTypeCondition(id, not, cellType, name);
     }
 }
 
@@ -105,11 +100,10 @@ public class NeighbourCondition : GeneCondition
     public int threshold;
     public ComparisonType comparisonType;
 
-    public NeighbourCondition(int id, bool strong, bool not, int threshold, ComparisonType comparisonType, string name = "")
+    public NeighbourCondition(int id, bool not, int threshold, ComparisonType comparisonType, string name = "")
     {
         this.id = id;
         this.name = name;
-        this.strong = strong;
         this.not = not;
         this.threshold = threshold;
         this.comparisonType = comparisonType;
@@ -119,7 +113,6 @@ public class NeighbourCondition : GeneCondition
     {
         this.id = condition.id;
         this.name = condition.name;
-        this.strong = condition.strong;
         this.not = condition.not;
         this.threshold = threshold;
         this.comparisonType = comparisonType;
@@ -142,6 +135,6 @@ public class NeighbourCondition : GeneCondition
 
     public override GeneCondition Clone()
     {
-        return new NeighbourCondition(id, strong, not, threshold, comparisonType, name);
+        return new NeighbourCondition(id, not, threshold, comparisonType, name);
     }
 }

@@ -331,18 +331,12 @@ public class Editor
 
             var name = geneCondition.name;
             var not = geneCondition.not;
-            var strong = geneCondition.strong;
 
             ImGui.SeparatorText("Properties");
 
             ImGui.InputText($"Name", ref name, 32);
             ImGui.Checkbox($"Not", ref not);
             HoverTooltip("Inverts the condition, e.g. \"Only work when cell type is *not* stem\"");
-            ImGui.SameLine();
-            ImGui.Dummy(new Vector2(10, 0));
-            ImGui.SameLine();
-            ImGui.Checkbox($"Strong", ref strong);
-            HoverTooltip("To activate / inhibit a gene, all strong conditions and at least one weak condition must be met.");
 
             if (geneCondition is ConcentrationCondition concentrationCondition)
             {
@@ -377,7 +371,6 @@ public class Editor
 
                 concentrationCondition.name = name;
                 concentrationCondition.not = not;
-                concentrationCondition.strong = strong;
                 concentrationCondition.comparisonType = comparisonType;
                 concentrationCondition.morphogenId = morphogenId;
                 concentrationCondition.thresholdConcentration = thresholdConcentration;
@@ -402,7 +395,6 @@ public class Editor
 
                 cellTypeCondition.name = name;
                 cellTypeCondition.not = not;
-                cellTypeCondition.strong = strong;
                 cellTypeCondition.cellType = cellType;
 
                 ImGui.TextWrapped($"Is cell type{(not ? " not " : " ")}{cellType.name}?");
@@ -436,7 +428,6 @@ public class Editor
 
                 neighbourCondition.name = name;
                 neighbourCondition.not = not;
-                neighbourCondition.strong = strong;
                 neighbourCondition.threshold = threshold;
                 neighbourCondition.comparisonType = comparisonType;
 
