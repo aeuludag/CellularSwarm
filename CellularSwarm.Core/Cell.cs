@@ -12,6 +12,7 @@ public class Cell
     public int neighbourCount = 0;
     public bool shouldMultiply;
     public bool shouldApoptosis;
+    public bool spawnedThisFrame = true;
     private GeneAction? _currentMultiplyAction;
 
     public Cell(Simulation simulation, CellType type, Dictionary<int, float> morphogens)
@@ -42,6 +43,7 @@ public class Cell
 
     public void Step()
     {
+        spawnedThisFrame = false;
         var actions = GetAvailableActions();
         foreach (var action in actions)
         {

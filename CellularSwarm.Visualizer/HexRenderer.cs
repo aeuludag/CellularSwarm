@@ -51,15 +51,20 @@ public class HexRenderer
         var pos = offset + new Vector2(x, -y);
         Raylib.DrawPoly(pos, 6, hexSize, 0, fillColor);
     }
+    public void Render(float x, float y, Color fillColor, float scale)
+    {
+        var pos = offset + new Vector2(x, -y);
+        Raylib.DrawPoly(pos, 6, hexSize * scale, 0, fillColor);
+    }
 
-    public void RenderFromSimulationRGB(SimulationRenderer simulationRenderer)
+    public void RenderSimulationThreeMorphogens(SimulationRenderer simulationRenderer)
     {
         // int rendered = 0;
         Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), camera);
         Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight()), camera);
 
         var simulation = simulationRenderer.Simulation;
-        var max = simulation.maxConcentration;
+        var max = simulation.maxConcentration / simulationRenderer.amplifier;
 
         foreach (var cellPair in simulation.Cells)
         {
@@ -79,7 +84,7 @@ public class HexRenderer
             // morphoText = $"{cellPair.Key}";
 
             var morphoColor = new Color(r / max, g / max, b / max);
-            Render(x, y, morphoColor);
+            Render(x, y, morphoColor, cellPair.Value.spawnedThisFrame ? 0.5f : 1f);
             // rendered++;
         }
         // Raylib.EndMode2D();
@@ -87,6 +92,48 @@ public class HexRenderer
         // Raylib.BeginMode2D(camera);
     }
 
+    public void RenderSimulationSingleMorphogen(SimulationRenderer simulationRenderer)
+    {
+        Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), camera);
+        Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight()), camera);
+
+        var simulation = simulationRenderer.Simulation;
+        var max = simulation.maxConcentration / simulationRenderer.amplifier;
+
+        foreach (var cellPair in simulation.Cells)
+        {
+            float x = hexSize * cellPair.Key.q * 3 / 2;
+            float y = hexSize * (float)Math.Sqrt(3f) * (cellPair.Key.r + (cellPair.Key.q / 2f));
+            var pos = offset + new Vector2(x, -y);
+
+            if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
+
+            float w = simulationRenderer.singleMorphogenId >= 0 ? cellPair.Value.GetMorphogenAmount(simulationRenderer.singleMorphogenId) : 0f;
+
+            var morphoColor = new Color(w / max, w / max, w / max);
+            Render(x, y, morphoColor, cellPair.Value.spawnedThisFrame ? 0.5f : 1f);
+        }
+    }
+    public void RenderSimulationCellTypes(SimulationRenderer simulationRenderer)
+    {
+        Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), camera);
+        Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight()), camera);
+
+        var simulation = simulationRenderer.Simulation;
+        var cellTypeColors = simulationRenderer.cellTypeColors;
+
+        foreach (var cellPair in simulation.Cells)
+        {
+            float x = hexSize * cellPair.Key.q * 3 / 2;
+            float y = hexSize * (float)Math.Sqrt(3f) * (cellPair.Key.r + (cellPair.Key.q / 2f));
+            var pos = offset + new Vector2(x, -y);
+
+            if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
+
+            var morphoColor = cellTypeColors.GetValueOrDefault(cellPair.Value.cellType.id, Color.Black);
+            Render(x, y, morphoColor, cellPair.Value.spawnedThisFrame ? 0.5f : 1f);
+        }
+    }
     public void RenderRectangle(HexCoords start, HexCoords end, Color fillColor, Color outlineColor)
     {
         var qDiff = end.q - start.q + 1;

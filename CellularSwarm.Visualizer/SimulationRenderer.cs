@@ -1,15 +1,21 @@
 using System;
 using System.Numerics;
 using CellularSwarm.Core;
+using Raylib_cs;
 
 public class SimulationRenderer
 {
     public Simulation Simulation { get => _simulation; set => _simulation = value; }
-    Simulation _simulation;
+    public VisualizationType visualizationType = VisualizationType.ThreeMorphogens;
 
+    public Dictionary<int, Color> cellTypeColors = new();
     public int redMorphogenId;
     public int greenMorphogenId;
     public int blueMorphogenId;
+    public int singleMorphogenId;
+    public float amplifier = 1f;
+    
+    Simulation _simulation;
 
     public SimulationRenderer()
     {
@@ -148,5 +154,11 @@ public class SimulationRenderer
         //     theCell.Morphogens.Clear();
         // }
         Simulation.Cells.Clear();
+    }
+    public enum VisualizationType
+    {
+        ThreeMorphogens,
+        SingleMorphogen,
+        CellTypes
     }
 }

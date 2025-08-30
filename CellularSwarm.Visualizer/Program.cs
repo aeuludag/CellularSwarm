@@ -65,6 +65,9 @@ ResetSimulation();
 
 var editor = new Editor(simulationRenderer);
 
+var camMin = 0.01f;
+var camMax = 2f;
+
 rlImGui.Setup(true);
 
 while (!Raylib.WindowShouldClose())
@@ -80,8 +83,6 @@ while (!Raylib.WindowShouldClose())
     mouseHex = MouseToHex();
     HandleKeyboardInput();
     HandleMouseInput();
-
-    camera.Zoom = Math.Clamp(camera.Zoom, 0.01f, 2f);
 
     if (play) { simulation.Step(); }
 
@@ -99,7 +100,20 @@ while (!Raylib.WindowShouldClose())
 
     if (camera.Zoom >= 0.3f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, Color.DarkGray);
 
-    renderer.RenderFromSimulationRGB(simulationRenderer);
+    switch (simulationRenderer.visualizationType)
+    {
+        case SimulationRenderer.VisualizationType.ThreeMorphogens:
+            renderer.RenderSimulationThreeMorphogens(simulationRenderer);
+            break;
+        case SimulationRenderer.VisualizationType.SingleMorphogen:
+            renderer.RenderSimulationSingleMorphogen(simulationRenderer);
+            break;
+        case SimulationRenderer.VisualizationType.CellTypes:
+            renderer.RenderSimulationCellTypes(simulationRenderer);
+            break;
+        default:
+            break;
+    }
 
     // renderer.Render(bottomLeft.q, bottomLeft.r, new Color(255, 0, 0, 100), new Color(0, 0, 255, 100), "BL");
     // renderer.Render(topRight.q, topRight.r, new Color(255, 0, 0, 100), new Color(0, 0, 255, 100), "TR");
@@ -203,14 +217,17 @@ void ToggleFullscreen()
 
 void SetZoomWithMouse()
 {
+    float targetZoom = camera.Zoom;
     float scroll = Raylib.GetMouseWheelMove();
     if (scroll == 0f) return;
-
-    var mousePosBefore = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
+    if (scroll > 0 && targetZoom == camMax) return;
+    if (scroll < 0 && targetZoom == camMin) return;
 
     float scrollAmount = Math.Clamp(scroll * 0.1f, -0.2f, +0.2f);
-    camera.Zoom *= 1f + scrollAmount;
 
+    var mousePosBefore = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
+    targetZoom *= 1f + scrollAmount;
+    camera.Zoom = Math.Clamp(targetZoom, camMin, camMax);
     var mousePosAfter = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
 
     camera.Target += mousePosBefore - mousePosAfter;

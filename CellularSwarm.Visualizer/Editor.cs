@@ -1,4 +1,5 @@
 using System;
+using Raylib_cs;
 using System.Numerics;
 using CellularSwarm.Core;
 using ImGuiNET;
@@ -562,31 +563,65 @@ public class Editor
             if (ImGui.InputFloat("Diffusion Factor", ref diffusionFactor)) { diffuser.diffusionFactor = Math.Max(0, diffusionFactor); }
             if (ImGui.InputInt("Diffusion Steps", ref diffusionSteps)) { simulation.diffusionSteps = Math.Max(0, diffusionSteps); }
 
-            ImGui.SeparatorText("Visualization");
+            if (ImGui.CollapsingHeader("Visualization"))
+            {
+                var visualizationType = Selector("visualizationType", "Visualization", [0, 1, 2], VisualizationTypeToString);
+                ImGui.Separator();
 
-            var morphogenKeys = morphogens.Keys.ToList();
+                var morphogenKeys = morphogens.Keys.ToList();
+                switch (visualizationType)
+                {
+                    case 0: // Three Morphogens
+                        renderer.visualizationType = SimulationRenderer.VisualizationType.ThreeMorphogens;
 
-            morphogenKeys.Remove(renderer.redMorphogenId);
-            morphogenKeys.Remove(renderer.greenMorphogenId);
-            morphogenKeys.Remove(renderer.blueMorphogenId);
+                        ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, 20f);
 
-            ImGui.PushStyleColor(ImGuiCol.Text, RED_LIGHT);
-            renderer.redMorphogenId = SoftSelector("redMorphogen", "Red", morphogenKeys, (id) => morphogens[id].name, renderer.redMorphogenId);
-            ImGui.PopStyleColor();
+                        morphogenKeys.Remove(renderer.redMorphogenId);
+                        morphogenKeys.Remove(renderer.greenMorphogenId);
+                        morphogenKeys.Remove(renderer.blueMorphogenId);
 
-            ImGui.PushStyleColor(ImGuiCol.Text, GREEN_LIGHT);
-            renderer.greenMorphogenId = SoftSelector("greenMorphogen", "Green", morphogenKeys, (id) => morphogens[id].name, renderer.greenMorphogenId);
-            ImGui.PopStyleColor();
+                        ImGui.PushStyleColor(ImGuiCol.Text, RED_LIGHT);
+                        renderer.redMorphogenId = SoftSelector("redMorphogen", "Red", morphogenKeys, (id) => morphogens[id].name, renderer.redMorphogenId);
+                        ImGui.PopStyleColor();
 
-            ImGui.PushStyleColor(ImGuiCol.Text, BLUE_LIGHT);
-            renderer.blueMorphogenId = SoftSelector("blueMorphogen", "Blue", morphogenKeys, (id) => morphogens[id].name, renderer.blueMorphogenId);
-            ImGui.PopStyleColor();
+                        ImGui.PushStyleColor(ImGuiCol.Text, GREEN_LIGHT);
+                        renderer.greenMorphogenId = SoftSelector("greenMorphogen", "Green", morphogenKeys, (id) => morphogens[id].name, renderer.greenMorphogenId);
+                        ImGui.PopStyleColor();
 
-            ImGui.SeparatorText("Stats");
+                        ImGui.PushStyleColor(ImGuiCol.Text, BLUE_LIGHT);
+                        renderer.blueMorphogenId = SoftSelector("blueMorphogen", "Blue", morphogenKeys, (id) => morphogens[id].name, renderer.blueMorphogenId);
+                        ImGui.PopStyleColor();
 
-            ImGui.BeginDisabled();
-            ImGui.Text($"Cell Count: {simulation.Cells.Count}");
-            ImGui.EndDisabled();
+                        break;
+                    case 1: // Single Morphogen
+                        renderer.visualizationType = SimulationRenderer.VisualizationType.SingleMorphogen;
+                        ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, 20f);
+                        renderer.singleMorphogenId = Selector("singleMorphogen", "Morphogen", morphogenKeys, (id) => morphogens[id].name, renderer.singleMorphogenId);
+                        break;
+                    case 2: // Cell Types
+                        renderer.visualizationType = SimulationRenderer.VisualizationType.CellTypes;
+                        foreach (var cellTypePair in simulation.CellTypes)
+                        {
+                            var cellTypeId = cellTypePair.Key;
+                            var cellType = cellTypePair.Value;
+                            Color color = renderer.cellTypeColors.GetValueOrDefault(cellTypeId, Color.Black);
+                            var colorVector = new Vector3(color.R / 255f, color.G / 255f, color.B / 255f);
+
+                            if (ImGui.ColorEdit3($"{cellType.name}##{cellTypeId}", ref colorVector, ImGuiColorEditFlags.Float))
+                            {
+                               renderer.cellTypeColors[cellTypeId] = new Color(colorVector.X, colorVector.Y, colorVector.Z);
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            InfoHeader(() =>
+            {
+                ImGui.Text($"Cell Count: {simulation.Cells.Count}");
+            });
 
             ImGui.PopID();
         }
@@ -841,6 +876,17 @@ public class Editor
             0 => "Concentration Condition",
             1 => "Cell Type Condition",
             2 => "Neighbour Condition",
+            _ => ""
+        };
+    }
+
+    string VisualizationTypeToString(int id)
+    {
+        return id switch
+        {
+            0 => "Three Morphogens",
+            1 => "Single Morphogen",
+            2 => "Cell Types",
             _ => ""
         };
     }
