@@ -16,6 +16,7 @@ public class Editor
     public bool showGeneConditionEditor = false;
     public bool showGeneEditor = false;
     public bool showSimulationEditor = false;
+    public bool showInspector = false;
     private readonly static Random random = new();
     Dictionary<string, int> selectorStates = new(); // help by gpt
     private readonly Vector4 RED_WARNING = new(0.9f, 0f, 0f, 1f);
@@ -32,7 +33,7 @@ public class Editor
         this.renderer = renderer;
     }
 
-    public void ShowWindowManager()
+    public void ShowWindowManager(HexCoords mouseHex)
     {
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(8, 8));
 
@@ -60,13 +61,14 @@ public class Editor
             }
         }
         ImGui.End();
-
+        
         if (showMorphogenEditor) ShowMorphogenEditor();
         if (showCellTypeEditor) ShowCellTypeEditor();
         if (showGeneActionEditor) ShowGeneActionEditor();
         if (showGeneConditionEditor) ShowGeneConditionEditor();
         if (showGeneEditor) ShowGeneEditor();
         if (showSimulationEditor) ShowSimulationEditor();
+        if (showInspector) ShowInspectWindow(mouseHex);
 
         ImGui.PopStyleVar();
     }
@@ -565,7 +567,7 @@ public class Editor
                     case 0: // Three Morphogens
                         renderer.visualizationType = SimulationRenderer.VisualizationType.ThreeMorphogens;
 
-                        ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, 20f);
+                        ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, simulation.maxConcentration);
 
                         morphogenKeys.Remove(renderer.redMorphogenId);
                         morphogenKeys.Remove(renderer.greenMorphogenId);
@@ -586,7 +588,7 @@ public class Editor
                         break;
                     case 1: // Single Morphogen
                         renderer.visualizationType = SimulationRenderer.VisualizationType.SingleMorphogen;
-                        ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, 20f);
+                        ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, simulation.maxConcentration);
                         renderer.singleMorphogenId = Selector("singleMorphogen", "Morphogen", morphogenKeys, (id) => morphogens[id].name, renderer.singleMorphogenId);
                         break;
                     case 2: // Cell Types
@@ -600,7 +602,7 @@ public class Editor
 
                             if (ImGui.ColorEdit3($"{cellType.name}##{cellTypeId}", ref colorVector, ImGuiColorEditFlags.Float))
                             {
-                               renderer.cellTypeColors[cellTypeId] = new Color(colorVector.X, colorVector.Y, colorVector.Z);
+                                renderer.cellTypeColors[cellTypeId] = new Color(colorVector.X, colorVector.Y, colorVector.Z);
                             }
                         }
                         break;
@@ -613,6 +615,59 @@ public class Editor
             {
                 ImGui.Text($"Cell Count: {simulation.Cells.Count}");
             });
+
+            ImGui.PopID();
+        }
+        ImGui.End();
+    }
+
+    void ShowInspectWindow(HexCoords mouseHex)
+    {
+        var simulation = renderer.Simulation;
+
+        ImGui.SetNextWindowPos(ImGui.GetMousePos() + new Vector2(10, 10), ImGuiCond.Always);
+        if (ImGui.Begin("Inspector", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing))
+        {
+            ImGui.PushID("inspector");
+
+            if (!simulation.Cells.TryGetValue(mouseHex, out Cell? cell))
+            {
+                ImGui.Text($"Position: {mouseHex}");
+                ImGui.TextDisabled("No cell here.");
+                ImGui.PopID(); ImGui.End(); return;
+            }
+
+            ImGui.Text($"Position: {mouseHex}");
+            ImGui.Text($"Cell Type: {cell.cellType.name}");
+
+            ImGui.SeparatorText("Morphogens");
+
+            foreach (var morphogenPair in cell.Morphogens)
+            {
+                ImGui.PushID($"morphogen{morphogenPair.Key}");
+                int morphogenId = morphogenPair.Key;
+                var morphogenAmount = morphogenPair.Value;
+                ImGui.Text($"{simulation.GetMorphogen(morphogenId).name} : {morphogenAmount:F2}");
+                ImGui.PopID();
+            }
+
+            ImGui.SeparatorText("Genes");
+
+            foreach (var gene in simulation.Genes.Values)
+            {
+                if (gene.ShouldBeActive(cell))
+                {
+                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.3f, 1f, 0.3f, 1f));
+                }
+                else
+                {
+                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.3f, 0.3f, 1f));
+                }
+                ImGui.PushID($"morphogen{gene.id}");
+                ImGui.Text($"{gene.name}");
+                ImGui.PopID();
+                ImGui.PopStyleColor();
+            }
 
             ImGui.PopID();
         }

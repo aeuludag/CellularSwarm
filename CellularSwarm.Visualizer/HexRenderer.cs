@@ -98,7 +98,7 @@ public class HexRenderer
         Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight()), camera);
 
         var simulation = simulationRenderer.Simulation;
-        var max = simulation.maxConcentration / simulationRenderer.amplifier;
+        var factor = simulationRenderer.amplifier / simulation.maxConcentration;
 
         foreach (var cellPair in simulation.Cells)
         {
@@ -109,8 +109,9 @@ public class HexRenderer
             if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
 
             float w = simulationRenderer.singleMorphogenId >= 0 ? cellPair.Value.GetMorphogenAmount(simulationRenderer.singleMorphogenId) : 0f;
+            w *= factor;
 
-            var morphoColor = new Color(w / max, w / max, w / max);
+            var morphoColor = new Color(w, w, w);
             Render(x, y, morphoColor, cellPair.Value.spawnedThisFrame ? 0.5f : 1f);
         }
     }

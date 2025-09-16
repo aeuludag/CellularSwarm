@@ -114,6 +114,20 @@ public class SimulationRenderer
         }
     }
 
+    public void RemoveCellGrid(int radius, HexCoords offset)
+    {
+        for (int q = -radius; q <= radius; q++)
+        {
+            for (int r = -radius; r <= radius; r++)
+            {
+                if (Math.Abs(q + r) <= radius)
+                {
+                    RemoveCell(offset + new HexCoords(q, r));
+                }
+            }
+        }
+    }
+
     public void AddCell(HexCoords coords, Vector3 palette)
     {
         palette *= Simulation.maxConcentration;

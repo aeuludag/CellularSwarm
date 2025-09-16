@@ -47,8 +47,6 @@ var mouseHex = new HexCoords(0, 0);
 var showHexCursor = false;
 var showInspectCursor = false;
 
-var showInspectWindow = false;
-
 Vector3 palette = new(0f, 0f, 0f);
 int brushSize = 0;
 
@@ -148,8 +146,7 @@ void DrawUI()
     Controls();
     GridEditor();
     SaveLoadWindow();
-    editor.ShowWindowManager();
-    if (showInspectWindow) ShowInspectWindow();
+    editor.ShowWindowManager(mouseHex);
 
     rlImGui.End();
 }
@@ -277,7 +274,7 @@ void SetGridMode()
 {
     showHexCursor = false;
     showInspectCursor = false;
-    showInspectWindow = false;
+    editor.showInspector = false;
     switch (state)
     {
         case GridStates.Brush:
@@ -295,7 +292,7 @@ void SetGridMode()
             showHexCursor = true;
             if (Raylib.IsMouseButtonDown(MouseButton.Left))
             {
-                simulationRenderer.RemoveCell(mouseHex);
+                simulationRenderer.RemoveCellGrid(brushSize, mouseHex);
             }
             break;
         case GridStates.Move:
@@ -306,61 +303,9 @@ void SetGridMode()
             break;
         case GridStates.Inspect:
             showInspectCursor = true;
-            showInspectWindow = true;
+            editor.showInspector = true;
             break;
     }
-}
-
-void ShowInspectWindow()
-{
-
-    ImGui.SetNextWindowPos(ImGui.GetMousePos() + new Vector2(10, 10), ImGuiCond.Always);
-    if (ImGui.Begin("Inspector", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing))
-    {
-        ImGui.PushID("inspector");
-
-        if (!simulation.Cells.TryGetValue(mouseHex, out Cell? cell))
-        {
-            ImGui.Text($"Position: {mouseHex}");
-            ImGui.TextDisabled("No cell here.");
-            ImGui.PopID(); ImGui.End(); return;
-        }
-
-        ImGui.Text($"Position: {mouseHex}");
-        ImGui.Text($"Cell Type: {cell.cellType.name}");
-
-        ImGui.SeparatorText("Morphogens");
-
-        foreach (var morphogenPair in cell.Morphogens)
-        {
-            ImGui.PushID($"morphogen{morphogenPair.Key}");
-            int morphogenId = morphogenPair.Key;
-            var morphogenAmount = morphogenPair.Value;
-            ImGui.Text($"{simulation.GetMorphogen(morphogenId).name} : {morphogenAmount:F2}");
-            ImGui.PopID();
-        }
-
-        ImGui.SeparatorText("Genes");
-
-        foreach (var gene in simulation.Genes.Values)
-        {
-            if (gene.ShouldBeActive(cell))
-            {
-                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.3f, 1f, 0.3f, 1f));
-            }
-            else
-            {
-                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.3f, 0.3f, 1f));
-            }
-            ImGui.PushID($"morphogen{gene.id}");
-            ImGui.Text($"{gene.name}");
-            ImGui.PopID();
-            ImGui.PopStyleColor();
-        }
-
-        ImGui.PopID();
-    }
-    ImGui.End();
 }
 
 HexCoords MouseToHex()
