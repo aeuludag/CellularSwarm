@@ -17,6 +17,10 @@ public class Editor
     public bool showGeneEditor = false;
     public bool showSimulationEditor = false;
     public bool showInspector = false;
+    public bool showCellEditor = false;
+
+    public HexCoords selectedCellCoords = new(int.MaxValue, int.MaxValue);
+
     private readonly static Random random = new();
     Dictionary<string, int> selectorStates = new(); // help by gpt
     private readonly Vector4 RED_WARNING = new(0.9f, 0f, 0f, 1f);
@@ -61,7 +65,7 @@ public class Editor
             }
         }
         ImGui.End();
-        
+
         if (showMorphogenEditor) ShowMorphogenEditor();
         if (showCellTypeEditor) ShowCellTypeEditor();
         if (showGeneActionEditor) ShowGeneActionEditor();
@@ -69,6 +73,7 @@ public class Editor
         if (showGeneEditor) ShowGeneEditor();
         if (showSimulationEditor) ShowSimulationEditor();
         if (showInspector) ShowInspectWindow(mouseHex);
+        if (showCellEditor) ShowCellEditor(selectedCellCoords);
 
         ImGui.PopStyleVar();
     }
@@ -663,11 +668,65 @@ public class Editor
                 {
                     ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.3f, 0.3f, 1f));
                 }
-                ImGui.PushID($"morphogen{gene.id}");
+                ImGui.PushID($"gene{gene.id}");
                 ImGui.Text($"{gene.name}");
                 ImGui.PopID();
                 ImGui.PopStyleColor();
             }
+
+            ImGui.PopID();
+        }
+        ImGui.End();
+    }
+
+    public void ShowCellEditor(HexCoords coords)
+    {
+        var key = "cellEditor";
+        var simulation = renderer.Simulation;
+        var cells = simulation.Cells;
+
+        if (!cells.ContainsKey(coords)) { showCellEditor = false; return; }
+        var cell = cells[coords];
+
+        var morphogens = simulation.Morphogens;
+        var cellContent = cell.Morphogens;
+
+        if (ImGui.Begin("Cell Editor", ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.PushID(key);
+
+            // CloseButton(ref showCellEditor);
+            // ImGui.Separator();
+
+            if (ImGui.Button("Set as Palette")) { renderer.cellToDraw = new(cell); }
+            ImGui.Separator();
+
+            ImGui.Text($"Cell Coordinates: {coords}");
+
+            ImGui.SeparatorText("Properties");
+
+            var cellType = cell.cellType;
+            var cellTypeId = cellType.id;
+
+            cellTypeId = Selector($"cellType", $"Cell Type", simulation.CellTypes.Keys.ToList(), (id) => simulation.CellTypes[id].name, cellTypeId);
+
+            cellType = simulation.CellTypes[cellTypeId];
+
+            cell.cellType = cellType;
+
+            ImGui.SeparatorText("Cell Content");
+
+            DictionaryFloatEditor(key, "Cell Content", cellContent, morphogens.Keys.ToList(), (id) => morphogens[id].name, max: 100f);
+
+            ImGui.Separator();
+
+            RedButton(() =>
+            {
+                if (ImGui.Button("Remove Cell"))
+                {
+                    simulation.Cells.Remove(coords);
+                }
+            });
 
             ImGui.PopID();
         }

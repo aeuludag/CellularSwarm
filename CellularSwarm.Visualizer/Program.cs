@@ -275,17 +275,18 @@ void SetGridMode()
     showHexCursor = false;
     showInspectCursor = false;
     editor.showInspector = false;
+    editor.showCellEditor = false;
     switch (state)
     {
         case GridStates.Brush:
             showHexCursor = true;
             if (Raylib.IsMouseButtonDown(MouseButton.Left))
             {
-                simulationRenderer.GenerateCellGrid(brushSize, mouseHex, palette);
+                simulationRenderer.GenerateCellGrid(brushSize, mouseHex, simulationRenderer.cellToDraw);
             }
             if (Raylib.IsMouseButtonDown(MouseButton.Right))
             {
-                simulationRenderer.GenerateCellGrid(brushSize, mouseHex, Vector3.Zero);
+                simulationRenderer.GenerateCellGrid(brushSize, mouseHex, simulationRenderer.emptyCell);
             }
             break;
         case GridStates.Erase:
@@ -304,6 +305,11 @@ void SetGridMode()
         case GridStates.Inspect:
             showInspectCursor = true;
             editor.showInspector = true;
+            editor.showCellEditor = true;
+            if (Raylib.IsMouseButtonDown(MouseButton.Left))
+            {
+                editor.selectedCellCoords = mouseHex;
+            }
             break;
     }
 }
@@ -435,17 +441,25 @@ void SaveLoadWindow()
         if (ImGui.Button(FontAwesome6.Upload + " Export"))
         {
             saveLoadHandler.SaveSimulation(simulation, saveLoadPath);
+            saveLoadHandler.badLoad = false;
         }
         ImGui.SameLine();
         if (ImGui.Button(FontAwesome6.Download + " Import"))
         {
             simulation = saveLoadHandler.LoadSimulation(saveLoadPath);
-            simulationRenderer.Simulation = simulation;
+            simulationRenderer.ChangeSimulation(simulation);
 
             var morphogenIds = simulation.Morphogens.Keys.ToList();
-            if (morphogenIds.Count >= 0) simulationRenderer.redMorphogenId = morphogenIds[0]; else simulationRenderer.redMorphogenId = -1;
-            if (morphogenIds.Count >= 1) simulationRenderer.greenMorphogenId = morphogenIds[1]; else simulationRenderer.greenMorphogenId = -1;
-            if (morphogenIds.Count >= 2) simulationRenderer.blueMorphogenId = morphogenIds[2]; else simulationRenderer.blueMorphogenId = -1;
+            if (morphogenIds.Count >= 1) simulationRenderer.redMorphogenId = morphogenIds[0]; else simulationRenderer.redMorphogenId = -1;
+            if (morphogenIds.Count >= 2) simulationRenderer.greenMorphogenId = morphogenIds[1]; else simulationRenderer.greenMorphogenId = -1;
+            if (morphogenIds.Count >= 3) simulationRenderer.blueMorphogenId = morphogenIds[2]; else simulationRenderer.blueMorphogenId = -1;
+        }
+        if (saveLoadHandler.badLoad)
+        {
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0f, 0f, 1f));
+            ImGui.Text($"No such file.");
+            ImGui.PopStyleColor();
         }
         ImGui.InputText(".json", ref saveLoadPath, 64);
     }
@@ -455,7 +469,7 @@ void SaveLoadWindow()
 void ResetSimulation()
 {
     // simulationRenderer.Simulation = saveLoadHandler.LoadSimulation("default");
-    simulationRenderer.Simulation = new(0, "new");
+    simulationRenderer.ChangeSimulation(new(DateTime.Now.Millisecond, $"new{DateTime.Now:G}"));
 
     simulationRenderer.redMorphogenId = -1;
     simulationRenderer.greenMorphogenId = -1;

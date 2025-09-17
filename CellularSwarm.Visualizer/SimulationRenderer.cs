@@ -9,17 +9,29 @@ public class SimulationRenderer
     public VisualizationType visualizationType = VisualizationType.ThreeMorphogens;
 
     public Dictionary<int, Color> cellTypeColors = new();
+    public List<Cell> cellPalette = new();
+    public Cell cellToDraw;
+    public Cell emptyCell;
     public int redMorphogenId;
     public int greenMorphogenId;
     public int blueMorphogenId;
     public int singleMorphogenId;
     public float amplifier = 1f;
-    
+
     Simulation _simulation;
 
     public SimulationRenderer()
     {
         _simulation = new(0, "new");
+        cellToDraw = new(_simulation);
+        emptyCell = new(_simulation);
+    }
+
+    public void ChangeSimulation(Simulation simulation)
+    {
+        _simulation = simulation;
+        cellToDraw = new(_simulation);
+        emptyCell = new(_simulation);
     }
 
     public Simulation SetSampleSimulation()
@@ -114,6 +126,20 @@ public class SimulationRenderer
         }
     }
 
+    public void GenerateCellGrid(int radius, HexCoords offset, Cell palette)
+    {
+        for (int q = -radius; q <= radius; q++)
+        {
+            for (int r = -radius; r <= radius; r++)
+            {
+                if (Math.Abs(q + r) <= radius)
+                {
+                    AddCell(offset + new HexCoords(q, r), palette);
+                }
+            }
+        }
+    }
+
     public void RemoveCellGrid(int radius, HexCoords offset)
     {
         for (int q = -radius; q <= radius; q++)
@@ -147,6 +173,16 @@ public class SimulationRenderer
         if (blueMorphogenId >= 0) cell.SetMorphogen(blueMorphogenId, palette.Z);
 
         Simulation.Cells.Add(coords, cell);
+    }
+
+    public void AddCell(HexCoords coords, Cell cell)
+    {
+        if (Simulation.Cells.ContainsKey(coords))
+        {
+            Simulation.Cells[coords] = new(cell);
+            return;
+        }
+        Simulation.AddCell(coords, cell);
     }
 
     public void RemoveCell(HexCoords coords)

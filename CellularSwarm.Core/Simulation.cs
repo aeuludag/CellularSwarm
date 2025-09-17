@@ -143,6 +143,11 @@ public class Simulation
         return Cells;
     }
 
+    public void AddCell(HexCoords coords, Cell cell)
+    {
+        Cells.Add(coords, new Cell(cell));
+    }
+
     public CellType Add(CellType cellType)
     {
         int newId = RandomId(CellTypes);
