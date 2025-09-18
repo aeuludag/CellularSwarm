@@ -10,6 +10,9 @@ public class Editor
 {
     public SimulationRenderer renderer;
 
+    public int brushSize;
+    public GridState gridState;
+
     public bool showMorphogenEditor = false;
     public bool showCellTypeEditor = false;
     public bool showGeneActionEditor = false;
@@ -18,6 +21,8 @@ public class Editor
     public bool showSimulationEditor = false;
     public bool showInspector = false;
     public bool showCellEditor = false;
+    public bool showGridEditor = true;
+    public bool showVisualizationEditor = true;
 
     public HexCoords selectedCellCoords = new(int.MaxValue, int.MaxValue);
 
@@ -43,6 +48,7 @@ public class Editor
 
         if (ImGui.Begin("Window Manager", ImGuiWindowFlags.AlwaysAutoResize))
         {
+            ImGui.Checkbox("Visualization Editor", ref showVisualizationEditor);
             ImGui.Checkbox("Morphogen Editor", ref showMorphogenEditor);
             ImGui.Checkbox("Cell Type Editor", ref showCellTypeEditor);
             ImGui.Checkbox("Gene Action Editor", ref showGeneActionEditor);
@@ -66,6 +72,7 @@ public class Editor
         }
         ImGui.End();
 
+        if (showVisualizationEditor) ShowVisualizationEditor();
         if (showMorphogenEditor) ShowMorphogenEditor();
         if (showCellTypeEditor) ShowCellTypeEditor();
         if (showGeneActionEditor) ShowGeneActionEditor();
@@ -74,6 +81,7 @@ public class Editor
         if (showSimulationEditor) ShowSimulationEditor();
         if (showInspector) ShowInspectWindow(mouseHex);
         if (showCellEditor) ShowCellEditor(selectedCellCoords);
+        if (showGridEditor) ShowGridEditor();
 
         ImGui.PopStyleVar();
     }
@@ -561,61 +569,6 @@ public class Editor
             if (ImGui.InputFloat("Diffusion Factor", ref diffusionFactor)) { diffuser.diffusionFactor = Math.Max(0, diffusionFactor); }
             if (ImGui.InputInt("Diffusion Steps", ref diffusionSteps)) { simulation.diffusionSteps = Math.Max(0, diffusionSteps); }
 
-            if (ImGui.CollapsingHeader("Visualization"))
-            {
-                var visualizationType = Selector("visualizationType", "Visualization", [0, 1, 2], VisualizationTypeToString);
-                ImGui.Separator();
-
-                var morphogenKeys = morphogens.Keys.ToList();
-                switch (visualizationType)
-                {
-                    case 0: // Three Morphogens
-                        renderer.visualizationType = SimulationRenderer.VisualizationType.ThreeMorphogens;
-
-                        ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, simulation.maxConcentration);
-
-                        morphogenKeys.Remove(renderer.redMorphogenId);
-                        morphogenKeys.Remove(renderer.greenMorphogenId);
-                        morphogenKeys.Remove(renderer.blueMorphogenId);
-
-                        ImGui.PushStyleColor(ImGuiCol.Text, RED_LIGHT);
-                        renderer.redMorphogenId = SoftSelector("redMorphogen", "Red", morphogenKeys, (id) => morphogens[id].name, renderer.redMorphogenId);
-                        ImGui.PopStyleColor();
-
-                        ImGui.PushStyleColor(ImGuiCol.Text, GREEN_LIGHT);
-                        renderer.greenMorphogenId = SoftSelector("greenMorphogen", "Green", morphogenKeys, (id) => morphogens[id].name, renderer.greenMorphogenId);
-                        ImGui.PopStyleColor();
-
-                        ImGui.PushStyleColor(ImGuiCol.Text, BLUE_LIGHT);
-                        renderer.blueMorphogenId = SoftSelector("blueMorphogen", "Blue", morphogenKeys, (id) => morphogens[id].name, renderer.blueMorphogenId);
-                        ImGui.PopStyleColor();
-
-                        break;
-                    case 1: // Single Morphogen
-                        renderer.visualizationType = SimulationRenderer.VisualizationType.SingleMorphogen;
-                        ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, simulation.maxConcentration);
-                        renderer.singleMorphogenId = Selector("singleMorphogen", "Morphogen", morphogenKeys, (id) => morphogens[id].name, renderer.singleMorphogenId);
-                        break;
-                    case 2: // Cell Types
-                        renderer.visualizationType = SimulationRenderer.VisualizationType.CellTypes;
-                        foreach (var cellTypePair in simulation.CellTypes)
-                        {
-                            var cellTypeId = cellTypePair.Key;
-                            var cellType = cellTypePair.Value;
-                            Color color = renderer.cellTypeColors.GetValueOrDefault(cellTypeId, Color.Black);
-                            var colorVector = new Vector3(color.R / 255f, color.G / 255f, color.B / 255f);
-
-                            if (ImGui.ColorEdit3($"{cellType.name}##{cellTypeId}", ref colorVector, ImGuiColorEditFlags.Float))
-                            {
-                                renderer.cellTypeColors[cellTypeId] = new Color(colorVector.X, colorVector.Y, colorVector.Z);
-                            }
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            }
-
             InfoHeader(() =>
             {
                 ImGui.Text($"Cell Count: {simulation.Cells.Count}");
@@ -643,7 +596,12 @@ public class Editor
             }
 
             ImGui.Text($"Position: {mouseHex}");
-            ImGui.Text($"Cell Type: {cell.cellType.name}");
+
+            ImGui.TextDisabled("Click to edit cell.");
+
+            ImGui.SeparatorText("Cell Type");
+
+            ImGui.Text($"{cell.cellType.name}");
 
             ImGui.SeparatorText("Morphogens");
 
@@ -685,7 +643,7 @@ public class Editor
         var simulation = renderer.Simulation;
         var cells = simulation.Cells;
 
-        if (!cells.ContainsKey(coords)) { showCellEditor = false; return; }
+        if (!cells.ContainsKey(coords)) { showCellEditor = false; selectedCellCoords = new(int.MaxValue, int.MaxValue); return; }
         var cell = cells[coords];
 
         var morphogens = simulation.Morphogens;
@@ -698,7 +656,10 @@ public class Editor
             // CloseButton(ref showCellEditor);
             // ImGui.Separator();
 
-            if (ImGui.Button("Set as Palette")) { renderer.cellToDraw = new(cell); }
+            if (ImGui.Button("Add to Palette"))
+            {
+                renderer.cellPalette.Add((new(cell), "New Cell"));
+            }
             ImGui.Separator();
 
             ImGui.Text($"Cell Coordinates: {coords}");
@@ -730,6 +691,145 @@ public class Editor
 
             ImGui.PopID();
         }
+        ImGui.End();
+    }
+
+    public void ShowGridEditor()
+    {
+        if (ImGui.Begin("Grid Controls", ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.PushID("gridEditor");
+            if (ImGui.RadioButton(IconFonts.FontAwesome6.ArrowsUpDownLeftRight + " Move", gridState == GridState.Move))
+            {
+                gridState = GridState.Move;
+            }
+            ImGui.SameLine();
+            if (ImGui.RadioButton(IconFonts.FontAwesome6.Pen + " Brush", gridState == GridState.Brush))
+            {
+                gridState = GridState.Brush;
+            }
+            ImGui.SameLine();
+            if (ImGui.RadioButton(IconFonts.FontAwesome6.Eraser + " Eraser", gridState == GridState.Erase))
+            {
+                gridState = GridState.Erase;
+            }
+            ImGui.SameLine();
+            if (ImGui.RadioButton(IconFonts.FontAwesome6.MagnifyingGlass + " Inspect", gridState == GridState.Inspect))
+            {
+                gridState = GridState.Inspect;
+            }
+
+            ImGui.Separator();
+
+            if (gridState != GridState.Brush) { ImGui.BeginDisabled(); }
+
+            if (renderer.cellIndex == 0) { ImGui.BeginDisabled(); }
+            RedButton(() =>
+            {
+                if (ImGui.Button(IconFonts.FontAwesome6.TrashCan))
+                {
+                    renderer.cellPalette.RemoveAt(renderer.cellIndex);
+                }
+            });
+            if (renderer.cellIndex == 0) { ImGui.EndDisabled(); }
+
+            ImGui.SameLine();
+
+            renderer.cellIndex = Selector("cellPaletteIndex", "Cell to Draw", Enumerable.Range(0, renderer.cellPalette.Count).ToList(), (i) => renderer.cellPalette[i].name);
+            var name = renderer.cellPalette[renderer.cellIndex].name;
+            if (ImGui.InputText("Cell Name", ref name, 32))
+            {
+                renderer.cellPalette[renderer.cellIndex] = (renderer.CellToDraw, name);
+            }
+
+            if (gridState != GridState.Brush) { ImGui.EndDisabled(); }
+
+            ImGui.Separator();
+
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize("Brush Size").X - 10);
+            brushSize++;
+            ImGui.SliderInt("Brush Size", ref brushSize, 1, 12);
+            brushSize--;
+
+
+            ImGui.PopID();
+        }
+        ImGui.End();
+    }
+
+    public void ShowVisualizationEditor()
+    {
+        var key = "visualizer";
+        var simulation = renderer.Simulation;
+        var morphogens = simulation.Morphogens;
+
+        if (ImGui.Begin("Visualization Editor", ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.PushID(key);
+
+            CloseButton(ref showVisualizationEditor);
+            
+            ImGui.Separator();
+
+            var visualizationType = Selector("visualizationType", "Mode", [0, 1, 2], VisualizationTypeToString);
+            ImGui.Separator();
+
+            var morphogenKeys = morphogens.Keys.ToList();
+            switch (visualizationType)
+            {
+                case 0: // Three Morphogens
+                    renderer.visualizationType = SimulationRenderer.VisualizationType.ThreeMorphogens;
+
+                    ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, simulation.maxConcentration);
+
+                    ImGui.Separator();
+
+                    morphogenKeys.Remove(renderer.redMorphogenId);
+                    morphogenKeys.Remove(renderer.greenMorphogenId);
+                    morphogenKeys.Remove(renderer.blueMorphogenId);
+
+                    ImGui.PushStyleColor(ImGuiCol.Text, RED_LIGHT);
+                    renderer.redMorphogenId = SoftSelector("redMorphogen", "Red", morphogenKeys, (id) => morphogens[id].name, renderer.redMorphogenId);
+                    ImGui.PopStyleColor();
+
+                    ImGui.PushStyleColor(ImGuiCol.Text, GREEN_LIGHT);
+                    renderer.greenMorphogenId = SoftSelector("greenMorphogen", "Green", morphogenKeys, (id) => morphogens[id].name, renderer.greenMorphogenId);
+                    ImGui.PopStyleColor();
+
+                    ImGui.PushStyleColor(ImGuiCol.Text, BLUE_LIGHT);
+                    renderer.blueMorphogenId = SoftSelector("blueMorphogen", "Blue", morphogenKeys, (id) => morphogens[id].name, renderer.blueMorphogenId);
+                    ImGui.PopStyleColor();
+
+                    break;
+                case 1: // Single Morphogen
+                    renderer.visualizationType = SimulationRenderer.VisualizationType.SingleMorphogen;
+                    ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, simulation.maxConcentration);
+
+                    ImGui.Separator();
+
+                    renderer.singleMorphogenId = Selector("singleMorphogen", "Morphogen", morphogenKeys, (id) => morphogens[id].name, renderer.singleMorphogenId);
+                    break;
+                case 2: // Cell Types
+                    renderer.visualizationType = SimulationRenderer.VisualizationType.CellTypes;
+                    foreach (var cellTypePair in simulation.CellTypes)
+                    {
+                        var cellTypeId = cellTypePair.Key;
+                        var cellType = cellTypePair.Value;
+                        Color color = renderer.cellTypeColors.GetValueOrDefault(cellTypeId, Color.Black);
+                        var colorVector = new Vector3(color.R / 255f, color.G / 255f, color.B / 255f);
+
+                        if (ImGui.ColorEdit3($"{cellType.name}##{cellTypeId}", ref colorVector, ImGuiColorEditFlags.Float))
+                        {
+                            renderer.cellTypeColors[cellTypeId] = new Color(colorVector.X, colorVector.Y, colorVector.Z);
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+            ImGui.PopID();
+        }
+
         ImGui.End();
     }
 
@@ -837,7 +937,7 @@ public class Editor
                 ImGui.PopItemWidth();
 
                 ImGui.TableSetColumnIndex(2);
-                if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Remove")) dict.Remove(dictKey);
+                RedButton(() => { if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Remove")) dict.Remove(dictKey); });
 
                 ImGui.PopID();
             }
@@ -1047,5 +1147,13 @@ public class Editor
             ImGui.Text(text);
             ImGui.EndTooltip();
         }
+    }
+
+    public enum GridState
+    {
+        Move,
+        Brush,
+        Erase,
+        Inspect
     }
 }

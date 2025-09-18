@@ -6,6 +6,7 @@ using IconFonts;
 
 using CellularSwarm.Core;
 using CellularSwarm.Visualizer;
+using static CellularSwarm.Visualizer.Editor;
 
 int width = 1500;
 int height = 900;
@@ -48,9 +49,6 @@ var showHexCursor = false;
 var showInspectCursor = false;
 
 Vector3 palette = new(0f, 0f, 0f);
-int brushSize = 0;
-
-GridStates state = GridStates.Move;
 
 SaveLoadHandler saveLoadHandler = new();
 string saveLoadPath = "default";
@@ -118,7 +116,15 @@ while (!Raylib.WindowShouldClose())
 
     if (showHexCursor)
     {
-        renderer.RenderRadialGrid(brushSize, new Color(palette.X, palette.Y, palette.Z, 0.1f), new Color(palette.X, palette.Y, palette.Z, 0.1f), mouseHex);
+        if (editor.gridState == GridState.Erase)
+        {
+            renderer.RenderRadialGrid(editor.brushSize,  new Color(0.7f, 0.7f, 0.7f, 0.1f), new Color(0f, 0f, 0f, 0.1f), mouseHex);
+        }
+        else
+        {
+            var cell = simulationRenderer.CellToDraw;
+            renderer.RenderRadialGrid(editor.brushSize, simulationRenderer.GetCellColor(cell, 0.1f), simulationRenderer.GetCellColor(cell, 0.1f), mouseHex);
+        }
     }
 
     if (showInspectCursor)
@@ -144,7 +150,6 @@ void DrawUI()
     rlImGui.Begin();
 
     Controls();
-    GridEditor();
     SaveLoadWindow();
     editor.ShowWindowManager(mouseHex);
 
@@ -253,10 +258,11 @@ void SetZoomWithKeyboard()
 
 void SetGridModeWithKeyboard()
 {
-    if (Raylib.IsKeyPressed(KeyboardKey.One)) { state = GridStates.Move; }
-    if (Raylib.IsKeyPressed(KeyboardKey.Two)) { state = GridStates.Brush; }
-    if (Raylib.IsKeyPressed(KeyboardKey.Three)) { state = GridStates.Erase; }
-    if (Raylib.IsKeyPressed(KeyboardKey.Four)) { state = GridStates.Inspect; }
+
+    if (Raylib.IsKeyPressed(KeyboardKey.One)) { editor.gridState = GridState.Move; }
+    if (Raylib.IsKeyPressed(KeyboardKey.Two)) { editor.gridState = GridState.Brush; }
+    if (Raylib.IsKeyPressed(KeyboardKey.Three)) { editor.gridState = GridState.Erase; }
+    if (Raylib.IsKeyPressed(KeyboardKey.Four)) { editor.gridState = GridState.Inspect; }
 }
 
 void ControlSimulationWithKeyboard()
@@ -276,33 +282,33 @@ void SetGridMode()
     showInspectCursor = false;
     editor.showInspector = false;
     editor.showCellEditor = false;
-    switch (state)
+    switch (editor.gridState)
     {
-        case GridStates.Brush:
+        case GridState.Brush:
             showHexCursor = true;
             if (Raylib.IsMouseButtonDown(MouseButton.Left))
             {
-                simulationRenderer.GenerateCellGrid(brushSize, mouseHex, simulationRenderer.cellToDraw);
+                simulationRenderer.GenerateCellGrid(editor.brushSize, mouseHex, simulationRenderer.CellToDraw);
             }
             if (Raylib.IsMouseButtonDown(MouseButton.Right))
             {
-                simulationRenderer.GenerateCellGrid(brushSize, mouseHex, simulationRenderer.emptyCell);
+                simulationRenderer.GenerateCellGrid(editor.brushSize, mouseHex, simulationRenderer.emptyCell);
             }
             break;
-        case GridStates.Erase:
+        case GridState.Erase:
             showHexCursor = true;
             if (Raylib.IsMouseButtonDown(MouseButton.Left))
             {
-                simulationRenderer.RemoveCellGrid(brushSize, mouseHex);
+                simulationRenderer.RemoveCellGrid(editor.brushSize, mouseHex);
             }
             break;
-        case GridStates.Move:
+        case GridState.Move:
             if (Raylib.IsMouseButtonDown(MouseButton.Left))
             {
                 MoveCameraWithMouse();
             }
             break;
-        case GridStates.Inspect:
+        case GridState.Inspect:
             showInspectCursor = true;
             editor.showInspector = true;
             editor.showCellEditor = true;
@@ -333,7 +339,7 @@ HexCoords PointsToHex(Vector2 position)
 
 void Controls()
 {
-    if (ImGui.Begin("Controls", ImGuiWindowFlags.AlwaysAutoResize))
+    if (ImGui.Begin("Simulation Controls", ImGuiWindowFlags.AlwaysAutoResize))
     {
         ImGui.SetWindowFontScale(scale);
         ImGui.Text(play ? "Playing..." : "Stopped");
@@ -357,78 +363,6 @@ void Controls()
         {
             ResetSimulation();
         }
-    }
-    ImGui.End();
-}
-
-void GridEditor()
-{
-    if (ImGui.Begin("Grid Editor", ImGuiWindowFlags.AlwaysAutoResize))
-    {
-        ImGui.PushID("gridEditor");
-        ImGui.SetWindowFontScale(scale);
-        ImGui.Text($"{state} tool is selected");
-        if (ImGui.RadioButton(IconFonts.FontAwesome6.ArrowsUpDownLeftRight + " Move", state == GridStates.Move))
-        {
-            state = GridStates.Move;
-        }
-        if (ImGui.RadioButton(IconFonts.FontAwesome6.Pen + " Brush", state == GridStates.Brush))
-        {
-            state = GridStates.Brush;
-        }
-        ImGui.SameLine();
-        brushSize++;
-        ImGui.SliderInt("Size", ref brushSize, 1, 12);
-        brushSize--;
-        if (ImGui.RadioButton(IconFonts.FontAwesome6.Eraser + " Eraser", state == GridStates.Erase))
-        {
-            state = GridStates.Erase;
-        }
-        if (ImGui.RadioButton(IconFonts.FontAwesome6.MagnifyingGlass + " Inspect", state == GridStates.Inspect))
-        {
-            state = GridStates.Inspect;
-        }
-
-        if (simulationRenderer.redMorphogenId >= 0)
-        {
-            var rMorph = simulation.GetMorphogen(simulationRenderer.redMorphogenId);
-            if (ImGui.ColorButton($"R ({rMorph.name})", new Vector4(1f, 0f, 0f, 1f)))
-            {
-                palette.X = 1 - palette.X;
-                if (ImGui.IsKeyDown(ImGuiKey.LeftShift)) { palette = new Vector3(1f, 0f, 0f); }
-            }
-            ImGui.SameLine();
-            ImGui.SliderFloat($"{rMorph.name}##r", ref palette.X, 0f, 1f);
-        }
-        else { palette.X = 0f; }
-
-        if (simulationRenderer.greenMorphogenId >= 0)
-        {
-            var gMorph = simulation.GetMorphogen(simulationRenderer.greenMorphogenId);
-            if (ImGui.ColorButton($"G ({gMorph.name})", new Vector4(0f, 1f, 0f, 1f)))
-            {
-                palette.Y = 1 - palette.Y;
-                if (ImGui.IsKeyDown(ImGuiKey.LeftShift)) { palette = new Vector3(0f, 1f, 0f); }
-            }
-            ImGui.SameLine();
-            ImGui.SliderFloat($"{gMorph.name}##g", ref palette.Y, 0f, 1f);
-        }
-        else { palette.Y = 0f; }
-
-        if (simulationRenderer.blueMorphogenId >= 0)
-        {
-            var bMorph = simulation.GetMorphogen(simulationRenderer.blueMorphogenId);
-            if (ImGui.ColorButton($"B ({bMorph.name})", new Vector4(0f, 0f, 1f, 1f)))
-            {
-                palette.Z = 1 - palette.Z;
-                if (ImGui.IsKeyDown(ImGuiKey.LeftShift)) { palette = new Vector3(0f, 0f, 1f); }
-            }
-            ImGui.SameLine();
-            ImGui.SliderFloat($"{bMorph.name}##b", ref palette.Z, 0f, 1f);
-        }
-        else { palette.Z = 0f; }
-
-        ImGui.PopID();
     }
     ImGui.End();
 }
@@ -469,19 +403,11 @@ void SaveLoadWindow()
 void ResetSimulation()
 {
     // simulationRenderer.Simulation = saveLoadHandler.LoadSimulation("default");
-    simulationRenderer.ChangeSimulation(new(DateTime.Now.Millisecond, $"new{DateTime.Now:G}"));
+    simulationRenderer.ChangeSimulation(new(DateTime.Now.Millisecond, $"new-{DateTime.Now:fffffff}"));
 
     simulationRenderer.redMorphogenId = -1;
     simulationRenderer.greenMorphogenId = -1;
     simulationRenderer.blueMorphogenId = -1;
 
     simulation = simulationRenderer.Simulation;
-}
-
-enum GridStates
-{
-    Move,
-    Brush,
-    Erase,
-    Inspect
 }

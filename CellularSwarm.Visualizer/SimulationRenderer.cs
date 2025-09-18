@@ -9,8 +9,8 @@ public class SimulationRenderer
     public VisualizationType visualizationType = VisualizationType.ThreeMorphogens;
 
     public Dictionary<int, Color> cellTypeColors = new();
-    public List<Cell> cellPalette = new();
-    public Cell cellToDraw;
+    public List<(Cell cell, string name)> cellPalette;
+    public int cellIndex;
     public Cell emptyCell;
     public int redMorphogenId;
     public int greenMorphogenId;
@@ -18,20 +18,24 @@ public class SimulationRenderer
     public int singleMorphogenId;
     public float amplifier = 1f;
 
+    public Cell CellToDraw { get => cellPalette[cellIndex].cell; }
+
     Simulation _simulation;
 
     public SimulationRenderer()
     {
         _simulation = new(0, "new");
-        cellToDraw = new(_simulation);
         emptyCell = new(_simulation);
+        cellPalette = [(emptyCell, "Empty Cell")];
+        cellIndex = 0;
     }
 
     public void ChangeSimulation(Simulation simulation)
     {
         _simulation = simulation;
-        cellToDraw = new(_simulation);
         emptyCell = new(_simulation);
+        cellPalette = [(emptyCell, "Empty Cell")];
+        cellIndex = 0;
     }
 
     public Simulation SetSampleSimulation()
@@ -204,6 +208,40 @@ public class SimulationRenderer
         //     theCell.Morphogens.Clear();
         // }
         Simulation.Cells.Clear();
+    }
+
+    public Color GetCellColor(Cell cell, float a = 1f)
+    {
+        switch (visualizationType)
+        {
+            case VisualizationType.ThreeMorphogens:
+                {
+                    float max = Simulation.maxConcentration;
+
+                    float r = redMorphogenId >= 0 ? cell.GetMorphogenAmount(redMorphogenId) : 0;
+                    float g = greenMorphogenId >= 0 ? cell.GetMorphogenAmount(greenMorphogenId) : 0;
+                    float b = blueMorphogenId >= 0 ? cell.GetMorphogenAmount(blueMorphogenId) : 0;
+
+                    var morphoColor = new Color(r / max, g / max, b / max, a);
+                    return morphoColor;
+                }
+            case VisualizationType.SingleMorphogen:
+                {
+                    var factor = amplifier / Simulation.maxConcentration;
+                    float w = singleMorphogenId >= 0 ? cell.GetMorphogenAmount(singleMorphogenId) : 0f;
+                    w *= factor;
+                    var morphoColor = new Color(w, w, w, a);
+                    return morphoColor;
+                }
+            case VisualizationType.CellTypes:
+                {
+                    var cellColor = cellTypeColors.GetValueOrDefault(cell.cellType.id, Color.Black);
+                    cellColor.A = (byte)(a * 255);
+                    return cellColor;
+                }
+            default:
+                return Color.Black;
+        }
     }
     public enum VisualizationType
     {
