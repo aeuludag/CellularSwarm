@@ -56,10 +56,11 @@ string saveLoadPath = "default";
 var backColor = new Color(40, 40, 40);
 
 SimulationRenderer simulationRenderer = new();
-Simulation simulation;
-ResetSimulation();
+Simulation GetSimulation() { return simulationRenderer.Simulation; }
 
 var editor = new Editor(simulationRenderer);
+
+ResetSimulation();
 
 var camMin = 0.01f;
 var camMax = 2f;
@@ -80,7 +81,7 @@ while (!Raylib.WindowShouldClose())
     HandleKeyboardInput();
     HandleMouseInput();
 
-    if (play) { simulation.Step(); }
+    if (play) { GetSimulation().Step(); }
 
     // --- Draw ---
     Raylib.BeginDrawing();
@@ -118,7 +119,7 @@ while (!Raylib.WindowShouldClose())
     {
         if (editor.gridState == GridState.Erase)
         {
-            renderer.RenderRadialGrid(editor.brushSize,  new Color(0.7f, 0.7f, 0.7f, 0.1f), new Color(0f, 0f, 0f, 0.1f), mouseHex);
+            renderer.RenderRadialGrid(editor.brushSize, new Color(0.7f, 0.7f, 0.7f, 0.1f), new Color(0f, 0f, 0f, 0.1f), mouseHex);
         }
         else
         {
@@ -269,7 +270,7 @@ void ControlSimulationWithKeyboard()
 {
     if (Raylib.IsKeyPressed(KeyboardKey.Space))
     {
-        if (Raylib.IsKeyDown(KeyboardKey.LeftShift)) { play = false; simulation.Step(); return; }
+        if (Raylib.IsKeyDown(KeyboardKey.LeftShift)) { play = false; GetSimulation().Step(); return; }
         play = !play;
     }
     if (Raylib.IsKeyPressed(KeyboardKey.C)) { simulationRenderer.ClearGrid(); }
@@ -292,7 +293,7 @@ void SetGridMode()
             }
             if (Raylib.IsMouseButtonDown(MouseButton.Right))
             {
-                simulationRenderer.GenerateCellGrid(editor.brushSize, mouseHex, simulationRenderer.emptyCell);
+                simulationRenderer.GenerateCellGrid(editor.brushSize, mouseHex, simulationRenderer.EmptyCell);
             }
             break;
         case GridState.Erase:
@@ -351,7 +352,7 @@ void Controls()
         if (ImGui.Button(IconFonts.FontAwesome6.ArrowRight + " Step"))
         {
             play = false;
-            simulation.Step();
+            GetSimulation().Step();
         }
         ImGui.SameLine();
         if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Clear"))
@@ -374,19 +375,14 @@ void SaveLoadWindow()
         ImGui.SetWindowFontScale(scale);
         if (ImGui.Button(FontAwesome6.Upload + " Export"))
         {
-            saveLoadHandler.SaveSimulation(simulation, saveLoadPath);
+            saveLoadHandler.SaveSimulation(GetSimulation(), simulationRenderer, saveLoadPath);
             saveLoadHandler.badLoad = false;
         }
         ImGui.SameLine();
         if (ImGui.Button(FontAwesome6.Download + " Import"))
         {
-            simulation = saveLoadHandler.LoadSimulation(saveLoadPath);
-            simulationRenderer.ChangeSimulation(simulation);
-
-            var morphogenIds = simulation.Morphogens.Keys.ToList();
-            if (morphogenIds.Count >= 1) simulationRenderer.redMorphogenId = morphogenIds[0]; else simulationRenderer.redMorphogenId = -1;
-            if (morphogenIds.Count >= 2) simulationRenderer.greenMorphogenId = morphogenIds[1]; else simulationRenderer.greenMorphogenId = -1;
-            if (morphogenIds.Count >= 3) simulationRenderer.blueMorphogenId = morphogenIds[2]; else simulationRenderer.blueMorphogenId = -1;
+            simulationRenderer = saveLoadHandler.LoadSimulation(saveLoadPath);
+            editor.renderer = simulationRenderer;
         }
         if (saveLoadHandler.badLoad)
         {
@@ -402,12 +398,6 @@ void SaveLoadWindow()
 
 void ResetSimulation()
 {
-    // simulationRenderer.Simulation = saveLoadHandler.LoadSimulation("default");
-    simulationRenderer.ChangeSimulation(new(DateTime.Now.Millisecond, $"new-{DateTime.Now:fffffff}"));
-
-    simulationRenderer.redMorphogenId = -1;
-    simulationRenderer.greenMorphogenId = -1;
-    simulationRenderer.blueMorphogenId = -1;
-
-    simulation = simulationRenderer.Simulation;
+    simulationRenderer = new(new(DateTime.Now.Millisecond, $"new-{DateTime.Now:fffffff}"));
+    editor.renderer = simulationRenderer;
 }

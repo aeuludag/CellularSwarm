@@ -11,7 +11,6 @@ public class SimulationRenderer
     public Dictionary<int, Color> cellTypeColors = new();
     public List<(Cell cell, string name)> cellPalette;
     public int cellIndex;
-    public Cell emptyCell;
     public int redMorphogenId;
     public int greenMorphogenId;
     public int blueMorphogenId;
@@ -19,22 +18,28 @@ public class SimulationRenderer
     public float amplifier = 1f;
 
     public Cell CellToDraw { get => cellPalette[cellIndex].cell; }
+    public Cell EmptyCell { get => cellPalette[0].cell; }
 
     Simulation _simulation;
 
     public SimulationRenderer()
     {
         _simulation = new(0, "new");
-        emptyCell = new(_simulation);
-        cellPalette = [(emptyCell, "Empty Cell")];
+        cellPalette = [(new Cell(_simulation), "Empty Cell")];
+        cellIndex = 0;
+    }
+
+    public SimulationRenderer(Simulation simulation)
+    {
+        _simulation = simulation;
+        cellPalette = [(new Cell(_simulation), "Empty Cell")];
         cellIndex = 0;
     }
 
     public void ChangeSimulation(Simulation simulation)
     {
         _simulation = simulation;
-        emptyCell = new(_simulation);
-        cellPalette = [(emptyCell, "Empty Cell")];
+        cellPalette = [(new Cell(_simulation), "Empty Cell")];
         cellIndex = 0;
     }
 
@@ -243,6 +248,7 @@ public class SimulationRenderer
                 return Color.Black;
         }
     }
+    
     public enum VisualizationType
     {
         ThreeMorphogens,

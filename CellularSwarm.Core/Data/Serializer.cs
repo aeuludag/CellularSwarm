@@ -4,12 +4,13 @@ namespace CellularSwarm.Core.Data;
 
 public class Serializer
 {
-    public static string Serialize(SimulationData data)
+    public static string Serialize(Simulation simulation)
     {
-        return JsonConvert.SerializeObject(data);
+        return JsonConvert.SerializeObject(SimulationData.FromSimulation(simulation));
     }
-    public static SimulationData Deserialize(string json)
+    public static Simulation Deserialize(string json)
     {
-        return JsonConvert.DeserializeObject<SimulationData>(json) ?? new SimulationData();
+        var data = JsonConvert.DeserializeObject<SimulationData>(json) ?? new SimulationData();
+        return SimulationData.ToSimulation(data);
     }
 }

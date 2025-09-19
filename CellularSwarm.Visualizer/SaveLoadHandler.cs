@@ -1,6 +1,7 @@
 using System;
 using CellularSwarm.Core;
 using CellularSwarm.Core.Data;
+using Newtonsoft.Json;
 
 namespace CellularSwarm.Visualizer;
 
@@ -15,26 +16,40 @@ public class SaveLoadHandler
         folder = Directory.GetParent(folder)!.FullName;
         folder = Path.Combine(folder, "Simulations");
     }
-    public void SaveSimulation(Simulation simulation, string name = "")
+    public void SaveSimulation(Simulation simulation, SimulationRenderer simulationRenderer, string name = "")
     {
-        var serialized = Serializer.Serialize(SimulationData.FromSimulation(simulation));
+        var serializedSimulation = Serializer.Serialize(simulation);
+        var serializedSimulationRenderer = VisualizationData.Serialize(simulationRenderer);
 
-        if (name == "") { File.WriteAllText(Path.Combine(folder, $"{simulation.name}.json"), serialized); return; }
-        else { File.WriteAllText(Path.Combine(folder, $"{name}.json"), serialized); return; }
+        if (name == "") { name = simulation.name; }
+
+        File.WriteAllText(Path.Combine(folder, $"{name}.json"), serializedSimulation);
+        File.WriteAllText(Path.Combine(folder, $"{name}.vis.json"), serializedSimulationRenderer);
+
+        return;
     }
-    public Simulation LoadSimulation(string name)
+    public SimulationRenderer LoadSimulation(string name)
     {
         try
         {
-            var deserialized = Serializer.Deserialize(File.ReadAllText(Path.Combine(folder, $"{name}.json")));
-            var simulation = SimulationData.ToSimulation(deserialized);
+            var simulation = Serializer.Deserialize(File.ReadAllText(Path.Combine(folder, $"{name}.json")));
+            SimulationRenderer simulationRenderer;
+            if (File.Exists(Path.Combine(folder, $"{name}.vis.json")))
+            {
+                simulationRenderer = VisualizationData.Deserialize(File.ReadAllText(Path.Combine(folder, $"{name}.vis.json")), simulation);
+            }
+            else
+            {
+                simulationRenderer = new(simulation);
+            }
             badLoad = false;
-            return simulation;
+            return simulationRenderer;
         }
         catch
         {
+            var simulation = new Simulation(0, "default-error");
             badLoad = true;
-            return new Simulation(0, "default-error");
+            return new SimulationRenderer(simulation);
         }
     }
 }

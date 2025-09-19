@@ -771,7 +771,7 @@ public class Editor
             
             ImGui.Separator();
 
-            var visualizationType = Selector("visualizationType", "Mode", [0, 1, 2], VisualizationTypeToString);
+            var visualizationType = Selector("visualizationType", "Mode", [0, 1, 2], VisualizationTypeToString, (int)renderer.visualizationType);
             ImGui.Separator();
 
             var morphogenKeys = morphogens.Keys.ToList();
