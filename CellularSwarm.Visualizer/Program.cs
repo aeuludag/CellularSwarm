@@ -22,6 +22,10 @@ Raylib.InitWindow(width, height, "Cellular Swarm");
 Raylib.SetWindowPosition(0, 0);
 Raylib.SetWindowMinSize(400, 400);
 Raylib.SetTargetFPS(60);
+// Image icon = Raylib.LoadImage("icon.png");
+Image icon = Raylib.GenImageColor(32, 32, Color.Red);
+Raylib.SetWindowIcon(icon);
+Raylib.UnloadImage(icon);
 
 var windowPos = Raylib.GetWindowPosition();
 
@@ -67,6 +71,8 @@ var camMax = 2f;
 
 rlImGui.Setup(true);
 
+Themes.ApplyTheme1();
+
 while (!Raylib.WindowShouldClose())
 {
     // --- Update ---
@@ -95,7 +101,7 @@ while (!Raylib.WindowShouldClose())
     var bottomLeft = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(0, Raylib.GetScreenHeight()), camera));
     var topRight = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), 0), camera));
 
-    if (camera.Zoom >= 0.3f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, Color.DarkGray);
+    if (camera.Zoom >= 0.2f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, Color.DarkGray);
 
     switch (simulationRenderer.visualizationType)
     {

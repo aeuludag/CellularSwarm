@@ -11,10 +11,11 @@ public class SaveLoadHandler
     public bool badLoad = false;
     public SaveLoadHandler()
     {
-        folder = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "";
-        folder = Directory.GetParent(folder)!.FullName;
-        folder = Directory.GetParent(folder)!.FullName;
-        folder = Path.Combine(folder, "Simulations");
+        // folder = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "";
+        // folder = Directory.GetParent(folder)!.FullName;
+        // folder = Directory.GetParent(folder)!.FullName;
+        // folder = Path.Combine(folder, "Simulations");
+        folder = "/Users/aeuludag/Documents/Simulations";
     }
     public void SaveSimulation(Simulation simulation, SimulationRenderer simulationRenderer, string name = "")
     {

@@ -274,13 +274,16 @@ public class Editor
             switch (actionType)
             {
                 case GeneAction.ActionType.ChangeMorphogen:
+                    ImGui.SeparatorText("Morphogen Delta");
                     DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, -max, max);
                     break;
                 case GeneAction.ActionType.Multiply:
+                    ImGui.SeparatorText("Morphogen Share Rate");
+                    HoverTooltip("0.0 : leave all to the parent\n0.5 : share equally (default)\n1.0 : give all to the child");
                     DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name);
                     break;
                 case GeneAction.ActionType.Apoptosis:
-                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name);
+                    // DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name);
                     break;
                 case GeneAction.ActionType.ChangeCellType:
                     cellTypeId = Selector($"cellType", $"Cell Type", simulation.CellTypes.Keys.ToList(), (id) => simulation.CellTypes[id].name, cellTypeId);
