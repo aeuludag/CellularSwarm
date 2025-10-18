@@ -21,11 +21,11 @@ Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
 Raylib.InitWindow(width, height, "Cellular Swarm");
 Raylib.SetWindowPosition(0, 0);
 Raylib.SetWindowMinSize(400, 400);
-Raylib.SetTargetFPS(60);
-// Image icon = Raylib.LoadImage("icon.png");
-Image icon = Raylib.GenImageColor(32, 32, Color.Red);
-Raylib.SetWindowIcon(icon);
-Raylib.UnloadImage(icon);
+// Raylib.SetTargetFPS(60);
+// // Image icon = Raylib.LoadImage("icon.png");
+// Image icon = Raylib.GenImageColor(32, 32, Color.Red);
+// Raylib.SetWindowIcon(icon);
+// Raylib.UnloadImage(icon);
 
 var windowPos = Raylib.GetWindowPosition();
 
@@ -71,7 +71,7 @@ var camMax = 2f;
 
 rlImGui.Setup(true);
 
-Themes.ApplyTheme1();
+// Themes.ApplyTheme1();
 
 while (!Raylib.WindowShouldClose())
 {
@@ -144,7 +144,7 @@ while (!Raylib.WindowShouldClose())
 
     DrawUI();
 
-    Raylib.DrawText($"FPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 5, 20, Color.White);
+    Raylib.DrawText($"Parallel: {simulationRenderer.Simulation.useParallel}\nFPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 5, 20, Color.White);
 
     Raylib.EndDrawing();
 }
@@ -173,6 +173,7 @@ void HandleKeyboardInput()
     SetGridModeWithKeyboard();
 
     if (Raylib.IsKeyPressed(KeyboardKey.F)) ToggleFullscreen();
+    if (Raylib.IsKeyPressed(KeyboardKey.P)) simulationRenderer.Simulation.useParallel ^= true;
 }
 
 void HandleMouseInput()

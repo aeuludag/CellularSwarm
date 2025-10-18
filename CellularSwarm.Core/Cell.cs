@@ -14,6 +14,7 @@ public class Cell
     public bool shouldApoptosis;
     public bool spawnedThisFrame = true;
     private GeneAction? _currentMultiplyAction;
+    private GeneAction? _currentTransportMorphogenAction;
 
     public Cell(Simulation simulation, CellType type, Dictionary<int, float> morphogens)
     {
@@ -45,10 +46,15 @@ public class Cell
     {
         spawnedThisFrame = false;
         var actions = GetAvailableActions();
+        var seenActions = new HashSet<int>();
         foreach (var action in actions)
         {
+            if (seenActions.Contains(action.id)) continue;
+
+            seenActions.Add(action.id);
             PerformAction(action);
         }
+
         foreach (var morphogenPair in _morphogens)
         {
             _morphogens[morphogenPair.Key] *= 1 - simulation.Morphogens[morphogenPair.Key].decayFactor;
@@ -92,6 +98,9 @@ public class Cell
                 break;
             case GeneAction.ActionType.ChangeCellType:
                 cellType = simulation.CellTypes[action.cellTypeId];
+                break;
+            case GeneAction.ActionType.TransportMorphogen:
+                _currentTransportMorphogenAction = action;
                 break;
         }
     }
@@ -138,7 +147,14 @@ public class Cell
 
         return new Cell(simulation, cellType, newMorphogens);
     }
+
+    public float GetTransportationDesire(int id)
+    {
+        if (_currentTransportMorphogenAction is null) return 0f;
+        return _currentTransportMorphogenAction.actionMorphogens.GetValueOrDefault(id, 0f);
+    }
 }
+
 public struct CellType
 {
     public int id;

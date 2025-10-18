@@ -47,5 +47,6 @@ public class GeneAction
         ChangeCellType,
         Apoptosis,
         Multiply,
+        TransportMorphogen,
     }
 }

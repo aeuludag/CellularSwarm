@@ -26,6 +26,8 @@ public class Simulation
     public NeighbourCondition DefaultNeighbourCondition { get; protected set; }
     public Gene DefaultGene { get; protected set; }
 
+    public bool useParallel;
+
     private readonly static Random random = new();
 
     public Simulation(int id, string name)
@@ -126,18 +128,34 @@ public class Simulation
             Cells.Add(freeTiles[i], newCell);
         }
 
-        foreach (var coords in cellsToApoptosis)
+        if (useParallel)
         {
-            var cell = Cells[coords];
+            for (int i = 0; i < diffusionSteps; i++)
+            {
+                Diffuser.DiffuseParallel();
+            }
 
-            cell.Apoptosis();
-            Diffuser.DiffuseAllOf(coords);
-            Cells.Remove(coords);
+            foreach (var coords in cellsToApoptosis)
+            {
+                var cell = Cells[coords];
+                cell.Apoptosis();
+                Cells.Remove(coords);
+            }
         }
-
-        for (int i = 0; i < diffusionSteps; i++)
+        else
         {
-            Diffuser.Diffuse();
+            for (int i = 0; i < diffusionSteps; i++)
+            {
+                Diffuser.Diffuse();
+            }
+
+            foreach (var coords in cellsToApoptosis)
+            {
+                var cell = Cells[coords];
+
+                cell.Apoptosis();
+                Cells.Remove(coords);
+            }
         }
 
         return Cells;
