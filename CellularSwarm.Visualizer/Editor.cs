@@ -22,7 +22,7 @@ public class Editor
     public bool showInspector = false;
     public bool showCellEditor = false;
     public bool showGridEditor = true;
-    public bool showVisualizationEditor = true;
+    public bool showVisualizationEditor = false;
 
     public HexCoords selectedCellCoords = new(int.MaxValue, int.MaxValue);
 

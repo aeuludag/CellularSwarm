@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+
 namespace CellularSwarm.Core;
 
 public class Simulation
@@ -26,7 +29,7 @@ public class Simulation
     public NeighbourCondition DefaultNeighbourCondition { get; protected set; }
     public Gene DefaultGene { get; protected set; }
 
-    public bool useParallel;
+    public bool useParallel = true;
 
     private readonly static Random random = new();
 
@@ -93,17 +96,40 @@ public class Simulation
         List<HexCoords> cellsToMultiply = new();
         List<HexCoords> cellsToApoptosis = new();
 
-        foreach (var cellPair in Cells)
+        if (useParallel)
         {
-            var coords = cellPair.Key;
-            var cell = cellPair.Value;
+            ConcurrentBag<HexCoords> cellsToMultiplyBag = new();
+            ConcurrentBag<HexCoords> cellsToApoptosisBag = new();
+            Parallel.ForEach(Cells, (cellPair) =>
+                    {
+                        var coords = cellPair.Key;
+                        var cell = cellPair.Value;
 
-            cell.neighbourCount = GetNeighbourCount(coords);
+                        cell.neighbourCount = GetNeighbourCount(coords);
 
-            cell.Step();
+                        cell.Step();
 
-            if (cell.shouldApoptosis) cellsToApoptosis.Add(coords);
-            if (cell.shouldMultiply) cellsToMultiply.Add(coords);
+                        if (cell.shouldApoptosis) cellsToApoptosisBag.Add(coords);
+                        if (cell.shouldMultiply) cellsToMultiplyBag.Add(coords);
+                    });
+
+            cellsToMultiply = cellsToMultiplyBag.ToList();
+            cellsToApoptosis = cellsToApoptosisBag.ToList();
+        }
+        else
+        {
+            foreach (var cellPair in Cells)
+            {
+                var coords = cellPair.Key;
+                var cell = cellPair.Value;
+
+                cell.neighbourCount = GetNeighbourCount(coords);
+
+                cell.Step();
+
+                if (cell.shouldApoptosis) cellsToApoptosis.Add(coords);
+                if (cell.shouldMultiply) cellsToMultiply.Add(coords);
+            }
         }
 
         foreach (var coords in cellsToMultiply)
@@ -161,6 +187,129 @@ public class Simulation
         return Cells;
     }
 
+    public Dictionary<HexCoords, Cell> DiagnosticStep(List<int> cellStep, List<int> multiplication, List<int> diffusion, List<int> apoptosis)
+    {
+        var sw = new Stopwatch();
+        TimeSpan cellStepElapsed;
+        TimeSpan multiplicationElapsed;
+        TimeSpan diffusionElapsed;
+        TimeSpan apoptosisElapsed;
+
+        List<HexCoords> cellsToMultiply = new();
+        List<HexCoords> cellsToApoptosis = new();
+
+        sw.Start();
+        if (useParallel)
+        {
+            ConcurrentBag<HexCoords> cellsToMultiplyBag = new();
+            ConcurrentBag<HexCoords> cellsToApoptosisBag = new();
+            Parallel.ForEach(Cells, (cellPair) =>
+                    {
+                        var coords = cellPair.Key;
+                        var cell = cellPair.Value;
+
+                        cell.neighbourCount = GetNeighbourCount(coords);
+
+                        cell.Step();
+
+                        if (cell.shouldApoptosis) cellsToApoptosisBag.Add(coords);
+                        if (cell.shouldMultiply) cellsToMultiplyBag.Add(coords);
+                    });
+
+            cellsToMultiply = cellsToMultiplyBag.ToList();
+            cellsToApoptosis = cellsToApoptosisBag.ToList();
+        }
+        else
+        {
+            foreach (var cellPair in Cells)
+            {
+                var coords = cellPair.Key;
+                var cell = cellPair.Value;
+
+                cell.neighbourCount = GetNeighbourCount(coords);
+
+                cell.Step();
+
+                if (cell.shouldApoptosis) cellsToApoptosis.Add(coords);
+                if (cell.shouldMultiply) cellsToMultiply.Add(coords);
+            }
+        }
+        sw.Stop();
+        cellStepElapsed = sw.Elapsed;
+
+        sw = Stopwatch.StartNew();
+        foreach (var coords in cellsToMultiply)
+        {
+            var cell = Cells[coords];
+            List<HexCoords> freeTiles = new(); // why did i use tile here?
+
+            foreach (var tile in coords.GetNeighbouringCoords())
+            {
+                if (Cells.ContainsKey(tile)) continue;
+                freeTiles.Add(tile);
+            }
+
+            if (freeTiles.Count == 0)
+            {
+                cell.shouldMultiply = false;
+                continue;
+            }
+
+            int i = random.Next(freeTiles.Count);
+            var newCell = cell.Multiply();
+            Cells.Add(freeTiles[i], newCell);
+        }
+        sw.Stop();
+        multiplicationElapsed = sw.Elapsed;
+
+        sw = Stopwatch.StartNew();
+        if (useParallel)
+        {
+            for (int i = 0; i < diffusionSteps; i++)
+            {
+                Diffuser.DiffuseParallel();
+            }
+            sw.Stop();
+            diffusionElapsed = sw.Elapsed;
+
+            sw = Stopwatch.StartNew();
+            foreach (var coords in cellsToApoptosis)
+            {
+                var cell = Cells[coords];
+                cell.Apoptosis();
+                Cells.Remove(coords);
+            }
+            sw.Stop();
+            apoptosisElapsed = sw.Elapsed;
+        }
+        else
+        {
+            for (int i = 0; i < diffusionSteps; i++)
+            {
+                Diffuser.Diffuse();
+            }
+            sw.Stop();
+            diffusionElapsed = sw.Elapsed;
+
+            sw = Stopwatch.StartNew();
+            foreach (var coords in cellsToApoptosis)
+            {
+                var cell = Cells[coords];
+
+                cell.Apoptosis();
+                Cells.Remove(coords);
+            }
+            sw.Stop();
+            apoptosisElapsed = sw.Elapsed;
+        }
+
+        cellStep.Add(cellStepElapsed.Microseconds);
+        multiplication.Add(multiplicationElapsed.Microseconds);
+        diffusion.Add(diffusionElapsed.Microseconds);
+        apoptosis.Add(apoptosisElapsed.Microseconds);
+
+        return Cells;
+    }
     public void AddCell(HexCoords coords, Cell cell)
     {
         Cells.Add(coords, new Cell(cell));
