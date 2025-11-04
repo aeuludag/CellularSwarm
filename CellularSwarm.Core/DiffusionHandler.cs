@@ -138,11 +138,11 @@ public class DiffusionHandler
         }
     }
 
-    // still not very familiar with parallel prpogramming so I used the help of gpt a bit
+    // still not very familiar with parallel programming so I used the help of gpt a bit
     public void DiffuseParallel()
     {
         var allLocalDeltas = new List<Dictionary<(HexCoords, int), float>>();
-        
+
         Parallel.ForEach(Simulation.Cells, () => new Dictionary<(HexCoords, int), float>(),
             (cellPair, state, localDelta) =>
             {
@@ -186,6 +186,45 @@ public class DiffusionHandler
             (coords, state, localDelta) =>
             {
                 var delta = DiffuseSingular(coords);
+                // still dont know much about parallel methods. 
+                foreach (var kv in delta)
+                {
+                    if (localDelta.TryGetValue(kv.Key, out var existing))
+                        localDelta[kv.Key] = existing + kv.Value;
+                    else
+                        localDelta[kv.Key] = kv.Value;
+                }
+                return localDelta;
+            },
+            localDelta =>
+            {
+                lock (allLocalDeltas) { allLocalDeltas.Add(localDelta); }
+            });
+
+        var morphogenDelta = new Dictionary<(HexCoords, int), float>();
+
+        foreach (var localDelta in allLocalDeltas)
+        {
+            foreach (((HexCoords coords, int morphogenId), float amount) in localDelta)
+            {
+                AddMorphogenTo(morphogenDelta, coords, morphogenId, amount);
+            }
+        }
+
+        foreach (((HexCoords coords, int morphogenId), float amount) in morphogenDelta)
+        {
+            Simulation.Cells[coords].AddMorphogen(morphogenId, amount);
+        }
+    }
+
+    public void DiffuseAllOfCollectionParallel(List<HexCoords> cellsToDiffuse)
+    {
+        var allLocalDeltas = new List<Dictionary<(HexCoords, int), float>>();
+
+        Parallel.ForEach(cellsToDiffuse, () => new Dictionary<(HexCoords, int), float>(),
+            (coords, state, localDelta) =>
+            {
+                var delta = DiffuseAllOfSingular(coords);
                 // still dont know much about parallel methods. 
                 foreach (var kv in delta)
                 {
@@ -261,6 +300,31 @@ public class DiffusionHandler
             }
 
             AddMorphogenTo(delta, coords, morphogenId, -totalShareAmount);
+        }
+
+        return delta;
+    }
+
+    public Dictionary<(HexCoords, int), float> DiffuseAllOfSingular(HexCoords coords)
+    {
+        var delta = new Dictionary<(HexCoords, int), float>();
+
+        var cell = Simulation.Cells[coords];
+        var neighbours = Simulation.GetNeighbours(coords);
+        var neighbourCount = neighbours.Count;
+
+        if (neighbourCount == 0) return delta;
+
+        foreach ((int morphogenId, float amount) in cell.Morphogens)
+        {
+            var shareAmount = amount / neighbourCount;
+
+            foreach (var neighbourCoords in neighbours)
+            {
+                AddMorphogenTo(delta, neighbourCoords, morphogenId, shareAmount);
+            }
+
+            AddMorphogenTo(delta, coords, morphogenId, -amount);
         }
 
         return delta;

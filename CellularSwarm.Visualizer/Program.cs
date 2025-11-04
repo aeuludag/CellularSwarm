@@ -8,6 +8,7 @@ using CellularSwarm.Core;
 using CellularSwarm.Visualizer;
 using static CellularSwarm.Visualizer.Editor;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 int width = 1500;
 int height = 900;
@@ -70,10 +71,11 @@ ResetSimulation();
 var camMin = 0.01f;
 var camMax = 2f;
 
+bool useParallel = true;
+
 rlImGui.Setup(true);
 
 Themes.ApplyTheme1();
-bool diagnosticStep = false;
 
 List<int> UIDrawTimes = new();
 List<int> simulationStepTimes = new();
@@ -96,11 +98,7 @@ while (!Raylib.WindowShouldClose())
     HandleKeyboardInput();
     HandleMouseInput();
 
-    if (play)
-    {
-        if (diagnosticStep) DiagnosticStep();
-        else GetSimulation().Step();
-    }
+    if (play) Step();
 
     // --- Draw ---
     Raylib.BeginDrawing();
@@ -155,21 +153,19 @@ while (!Raylib.WindowShouldClose())
 
     Raylib.EndMode2D();
 
-    if (diagnosticStep)
-    {
-        Stopwatch sw = Stopwatch.StartNew();
-        DrawUI();
-        sw.Stop();
-        UIDrawTimes.Add(sw.Elapsed.Microseconds);
-    }
-    else
-    {
-        DrawUI();
-    }
+    DrawUI();
 
-    Raylib.DrawText($"Parallel: {simulationRenderer.Simulation.useParallel}\nDiagnostic: {diagnosticStep}\nFPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 5, 20, Color.White);
+    Raylib.DrawText($"Cellular Swarm - v0.1.041125", 5, 5, 20, Color.White);
+    Raylib.DrawText($"{RuntimeInformation.OSArchitecture} - {Environment.OSVersion} - {DateTime.Today:d}\n{Raylib.GetFPS()} FPS - W: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 25, 15, Color.RayWhite);
+    // Raylib.DrawText($"FPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}\nParallel: {simulationRenderer.Simulation.useParallel}\nDiagnostic: {diagnosticStep}", 5, 25, 15, Color.RayWhite);
 
     Raylib.EndDrawing();
+}
+
+void Step()
+{
+    if (useParallel) GetSimulation().StepParallel();
+    else GetSimulation().Step();
 }
 
 rlImGui.Shutdown();
@@ -182,7 +178,6 @@ void DrawUI()
     Controls();
     SaveLoadWindow();
     editor.ShowWindowManager(mouseHex);
-    ShowDiagnosticDataUI();
 
     rlImGui.End();
 }
@@ -197,8 +192,8 @@ void HandleKeyboardInput()
     SetGridModeWithKeyboard();
 
     if (Raylib.IsKeyPressed(KeyboardKey.F)) ToggleFullscreen();
-    if (Raylib.IsKeyPressed(KeyboardKey.P)) simulationRenderer.Simulation.useParallel ^= true;
-    if (Raylib.IsKeyPressed(KeyboardKey.T)) diagnosticStep ^= true;
+    if (Raylib.IsKeyPressed(KeyboardKey.P)) useParallel ^= true;
+    // if (Raylib.IsKeyPressed(KeyboardKey.T)) diagnosticStep ^= true;
     if (Raylib.IsKeyPressed(KeyboardKey.G)) { simulationStepTimes.Clear(); cellStepTimes.Clear(); multiplicationTimes.Clear(); diffusionTimes.Clear(); apoptosisTimes.Clear(); }
 }
 
@@ -288,6 +283,7 @@ void SetZoomWithKeyboard()
 {
     if (Raylib.IsKeyDown(KeyboardKey.E)) { camera.Zoom *= 1.05f; }
     if (Raylib.IsKeyDown(KeyboardKey.Q)) { camera.Zoom *= 0.95f; }
+    camera.Zoom = Math.Clamp(camera.Zoom, camMin, camMax);
 }
 
 void SetGridModeWithKeyboard()
@@ -306,8 +302,7 @@ void ControlSimulationWithKeyboard()
         if (Raylib.IsKeyDown(KeyboardKey.LeftShift))
         {
             play = false;
-            if (diagnosticStep) { DiagnosticStep(); }
-            else GetSimulation().Step();
+            GetSimulation().Step();
             return;
         }
         play = !play;
@@ -337,127 +332,6 @@ void ControlSimulationWithKeyboard()
 //         $"## Diffusion:      {diffusionTimes.Average()} us \n" +
 //         $"## Apoptosis:      {apoptosisTimes.Average()} us \n");
 // }
-
-void DiagnosticStep()
-{
-    Stopwatch sw = Stopwatch.StartNew();
-    GetSimulation().DiagnosticStep(cellStepTimes, multiplicationTimes, diffusionTimes, apoptosisTimes);
-    sw.Stop();
-    simulationStepTimes.Add(sw.Elapsed.Microseconds);
-}
-
-void ShowDiagnosticDataUI()
-{
-    if (simulationStepTimes.Count == 0) return;
-    if (ImGui.Begin("Diagnostic Values", ImGuiWindowFlags.AlwaysAutoResize))
-    {
-        ImGui.SeparatorText("Counts");
-        ImGui.Text($"Cells: {GetSimulation().Cells.Count}");
-        ImGui.Text($"Morphogens: {GetSimulation().Morphogens.Count}");
-        ImGui.Text($"Genes: {GetSimulation().Genes.Count}");
-
-        ImGui.SeparatorText("Recorded Steps");
-        ImGui.Text($"Simulation Steps Recorded: {simulationStepTimes.Count}");
-        ImGui.Text($"Cell Steps Recorded: {cellStepTimes.Count}");
-        ImGui.Text($"Multiplication Steps Recorded: {multiplicationTimes.Count}");
-        ImGui.Text($"Diffusion Steps Recorded: {diffusionTimes.Count}");
-        ImGui.Text($"Apoptosis Steps Recorded: {apoptosisTimes.Count}");
-
-        ImGui.SeparatorText("Averages (microseconds)");
-        if (ImGui.BeginTable("averages", 2, ImGuiTableFlags.Borders))
-        {
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("UI Draw");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{UIDrawTimes.Average():F2}");
-
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("Simulation Step");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{simulationStepTimes.Average():F2}");
-
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("Cell Step");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{cellStepTimes.Average():F2}");
-
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("Multiplication");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{multiplicationTimes.Average():F2}");
-
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("Diffusion");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{diffusionTimes.Average():F2}");
-
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("Apoptosis");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{apoptosisTimes.Average():F2}");
-
-            ImGui.EndTable();
-        }
-
-        ImGui.SeparatorText("Last Values (microseconds)");
-        if (ImGui.BeginTable("lasts", 2, ImGuiTableFlags.Borders))
-        {
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("UI Draw");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{UIDrawTimes.Last():F2}");
-
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("Simulation Step");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{simulationStepTimes.Last():F2}");
-
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("Cell Step");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{cellStepTimes.Last():F2}");
-
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("Multiplication");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{multiplicationTimes.Last():F2}");
-
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("Diffusion");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{diffusionTimes.Last():F2}");
-
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            ImGui.Text("Apoptosis");
-            ImGui.TableNextColumn();
-            ImGui.Text($"{apoptosisTimes.Last():F2}");
-
-            ImGui.EndTable();
-        }
-        if (Math.Abs(cellStepTimes.Last() + multiplicationTimes.Last() + diffusionTimes.Last() + apoptosisTimes.Last() - simulationStepTimes.Last()) > 100)
-        {
-            ImGui.SeparatorText("Warning");
-            ImGui.TextColored(new Vector4(1f, 0.5f, 0f, 1f), "This should not be possible.");
-        } else
-        {
-            ImGui.SeparatorText("Check");
-            ImGui.TextColored(new Vector4(0f, 1f, 0f, 1f), "All values look good.");
-        }
-        ImGui.End();
-    }
-}
 
 void SetGridMode()
 {
