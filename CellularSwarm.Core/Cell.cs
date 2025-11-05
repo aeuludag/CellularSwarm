@@ -12,9 +12,10 @@ public class Cell
     public int neighbourCount = 0;
     public bool shouldMultiply;
     public bool shouldApoptosis;
+    public bool shouldTransport;
     public bool spawnedThisFrame = true;
-    private GeneAction? _currentMultiplyAction;
-    private GeneAction? _currentTransportMorphogenAction;
+    private Dictionary<int, float> _currentMultiplyActionMorphogens = new();
+    private Dictionary<int, float> _currentTransportMorphogenActionMorphogens = new();
 
     public Cell(Simulation simulation, CellType type, Dictionary<int, float> morphogens)
     {
@@ -45,6 +46,9 @@ public class Cell
     public void Step()
     {
         spawnedThisFrame = false;
+        shouldTransport = false;
+        _currentMultiplyActionMorphogens.Clear();
+        _currentTransportMorphogenActionMorphogens.Clear();
         var actions = GetAvailableActions();
         var seenActions = new HashSet<int>();
         foreach (var action in actions)
@@ -85,22 +89,42 @@ public class Cell
                 {
                     AddMorphogen(pair.Key, pair.Value);
                 }
+
                 break;
 
             case GeneAction.ActionType.Apoptosis:
+
                 shouldApoptosis = true;
+
                 break;
 
             case GeneAction.ActionType.Multiply:
+
                 if (neighbourCount == 6) break;
-                _currentMultiplyAction = action;
+                
+                foreach (var (id, rate) in action.actionMorphogens)
+                {
+                    _currentMultiplyActionMorphogens.Add(id, rate);
+                }
+
                 shouldMultiply = true;
                 break;
+
             case GeneAction.ActionType.ChangeCellType:
+
                 cellType = simulation.CellTypes[action.cellTypeId];
                 break;
+
             case GeneAction.ActionType.TransportMorphogen:
-                _currentTransportMorphogenAction = action;
+
+                if (neighbourCount == 0) break;
+
+                foreach (var (id, bias) in action.actionMorphogens)
+                {
+                    _currentTransportMorphogenActionMorphogens.Add(id, bias);
+                }
+
+                shouldTransport = true;
                 break;
         }
     }
@@ -130,10 +154,9 @@ public class Cell
 
     public Cell Multiply()
     {
-        if (_currentMultiplyAction is null) throw new System.NullReferenceException("Current multiply action is null, which should be impossible!!");
         if (!shouldMultiply) throw new System.Exception("Should NOT multiply now.");
 
-        Dictionary<int, float> morphogenShare = _currentMultiplyAction.actionMorphogens;
+        Dictionary<int, float> morphogenShare = _currentMultiplyActionMorphogens;
 
         shouldMultiply = false;
 
@@ -148,10 +171,14 @@ public class Cell
         return new Cell(simulation, cellType, newMorphogens);
     }
 
-    public float GetTransportationDesire(int id)
+    public Dictionary<int, float> GetAllTransportationBiases()
     {
-        if (_currentTransportMorphogenAction is null) return 0f;
-        return _currentTransportMorphogenAction.actionMorphogens.GetValueOrDefault(id, 0f);
+        return _currentTransportMorphogenActionMorphogens;
+    }
+    
+    public float GetTransportationBias(int id)
+    {
+        return _currentTransportMorphogenActionMorphogens.GetValueOrDefault(id, 0f);
     }
 }
 

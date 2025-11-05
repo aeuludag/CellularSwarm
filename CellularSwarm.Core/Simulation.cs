@@ -153,6 +153,7 @@ public class Simulation
 
         ConcurrentBag<HexCoords> cellsToMultiplyBag = new();
         ConcurrentBag<HexCoords> cellsToApoptosisBag = new();
+
         Parallel.ForEach(Cells, (cellPair) =>
                 {
                     var coords = cellPair.Key;
@@ -205,6 +206,8 @@ public class Simulation
         {
             Diffuser.DiffuseParallel();
         }
+
+        Diffuser.ActiveTransportationCollectionParallel(Cells.Keys.ToList());
 
         return Cells;
     }

@@ -267,7 +267,7 @@ public class Editor
             if (ImGui.InputText($"Name", ref name, 32)) { geneAction.name = name; }
 
             actionType = (GeneAction.ActionType)Selector($"actionTypeSelector", $"Action Type",
-            [0, 1, 2, 3], (id) => ActionTypeToString((GeneAction.ActionType)id), (int)actionType);
+            [0, 1, 2, 3, 4], (id) => ActionTypeToString((GeneAction.ActionType)id), (int)actionType);
 
             geneAction.actionType = actionType;
 
@@ -288,6 +288,11 @@ public class Editor
                 case GeneAction.ActionType.ChangeCellType:
                     cellTypeId = Selector($"cellType", $"Cell Type", simulation.CellTypes.Keys.ToList(), (id) => simulation.CellTypes[id].name, cellTypeId);
                     geneAction.cellTypeId = cellTypeId;
+                    break;
+                case GeneAction.ActionType.TransportMorphogen:
+                    ImGui.SeparatorText("Active Transportation");
+                    HoverTooltip("-1.0 : pull all of morphogen\n 0.0 : no transportation (default)\n+1.0 : push all of morphogen");
+                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, min: -1, max:+1);
                     break;
             }
 
@@ -1062,6 +1067,7 @@ public class Editor
             GeneAction.ActionType.ChangeCellType => "Change Cell Type",
             GeneAction.ActionType.Apoptosis => "Apoptosis",
             GeneAction.ActionType.Multiply => "Multiply",
+            GeneAction.ActionType.TransportMorphogen => "Active Transportation",
             _ => "",
         };
     }
