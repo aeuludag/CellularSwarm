@@ -155,7 +155,7 @@ while (!Raylib.WindowShouldClose())
 
     DrawUI();
 
-    Raylib.DrawText($"Cellular Swarm - v0.1.251105", 5, 5, 20, Color.White);
+    Raylib.DrawText($"Cellular Swarm - v0.1.251114", 5, 5, 20, Color.White);
     Raylib.DrawText($"{RuntimeInformation.OSArchitecture} - {Environment.OSVersion} - {DateTime.Today:d}\n{Raylib.GetFPS()} FPS - W: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 25, 15, Color.RayWhite);
     // Raylib.DrawText($"FPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}\nParallel: {simulationRenderer.Simulation.useParallel}\nDiagnostic: {diagnosticStep}", 5, 25, 15, Color.RayWhite);
 

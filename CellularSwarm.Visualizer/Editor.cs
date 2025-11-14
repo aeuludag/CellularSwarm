@@ -186,11 +186,17 @@ public class Editor
             var name = morphogen.name;
             var difFac = morphogen.diffusionFactor;
             var decFac = morphogen.decayFactor;
+            var max = simulation.maxConcentration;
 
             if (ImGui.InputText($"Name", ref name, 32)) { morphogen.name = name; }
-            if (ImGui.SliderFloat($"Diffusion Factor", ref difFac, 0f, 1f)) { morphogen.diffusionFactor = difFac; }
+            if (ImGui.SliderFloat($"##diffusionSlider", ref difFac, 0f, 1f)) { morphogen.diffusionFactor = difFac; }
+            ImGui.SameLine();
+            WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat($"Diffusion Factor", ref difFac)) { difFac = Math.Clamp(difFac, 0f, 1f); morphogen.diffusionFactor = difFac; } });
             HoverTooltip("How fast the morphogen flows & diffuses.");
-            if (ImGui.SliderFloat($"Decay Factor", ref decFac, 0f, 1f)) { morphogen.decayFactor = decFac; }
+            if (ImGui.SliderFloat($"##decaySlider", ref decFac, 0f, 1f)) { morphogen.decayFactor = decFac; }
+            ImGui.SameLine();
+            WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat($"Decay Factor", ref decFac)) { decFac = Math.Clamp(decFac, 0f, 1f); morphogen.decayFactor = decFac; } });
+
             HoverTooltip("How fast the morphogen decays.");
 
             List<string> referencedInConditions = new();
@@ -292,7 +298,7 @@ public class Editor
                 case GeneAction.ActionType.TransportMorphogen:
                     ImGui.SeparatorText("Active Transportation");
                     HoverTooltip("-1.0 : pull all of morphogen\n 0.0 : no transportation (default)\n+1.0 : push all of morphogen");
-                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, min: -1, max:+1);
+                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, min: -1, max: +1);
                     break;
             }
 
@@ -386,9 +392,9 @@ public class Editor
                     ImGui.PopItemWidth();
 
                     ImGui.TableSetColumnIndex(2);
-                    ImGui.PushItemWidth(150);
-                    ImGui.SliderFloat($"##Threshold", ref thresholdConcentration, 0f, simulation.maxConcentration);
-                    ImGui.PopItemWidth();
+                    WidthX(150, () => { ImGui.SliderFloat($"##ThresholdSlider", ref thresholdConcentration, 0f, simulation.maxConcentration); });
+                    ImGui.SameLine();
+                    WidthX(ImGui.CalcTextSize($"{simulation.maxConcentration:F3}").X + 20, () => { if (ImGui.InputFloat($"##ThresholdInput", ref thresholdConcentration)) { thresholdConcentration = Math.Clamp(thresholdConcentration, 0f, simulation.maxConcentration); } });
                 }
                 ImGui.EndTable();
 
@@ -776,7 +782,7 @@ public class Editor
             ImGui.PushID(key);
 
             CloseButton(ref showVisualizationEditor);
-            
+
             ImGui.Separator();
 
             var visualizationType = Selector("visualizationType", "Mode", [0, 1, 2], VisualizationTypeToString, (int)renderer.visualizationType);
@@ -940,9 +946,9 @@ public class Editor
                 ImGui.Text(getName(dictKey));
 
                 ImGui.TableSetColumnIndex(1);
-                ImGui.PushItemWidth(200);
-                if (ImGui.SliderFloat("##value", ref value, min, max)) dict[dictKey] = value;
-                ImGui.PopItemWidth();
+                WidthX(200, () => { if (ImGui.SliderFloat("##valueSlider", ref value, min, max)) dict[dictKey] = value; });
+                ImGui.SameLine();
+                WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat("##valueInput", ref value)) { value = Math.Clamp(value, min, max); dict[dictKey] = value; } });
 
                 ImGui.TableSetColumnIndex(2);
                 RedButton(() => { if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Remove")) dict.Remove(dictKey); });
@@ -1146,6 +1152,13 @@ public class Editor
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.5f, 0f, 0f, 1f));
         content();
         ImGui.PopStyleColor(3);
+    }
+
+    void WidthX(float x, Action content)
+    {
+        ImGui.PushItemWidth(x);
+        content();
+        ImGui.PopItemWidth();
     }
 
     void HoverTooltip(string text)
