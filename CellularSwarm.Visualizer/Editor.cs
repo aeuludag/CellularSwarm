@@ -37,6 +37,8 @@ public class Editor
     private readonly Vector4 BLUE_DARK = new(0.3f, 0f, 0f, 1f);
     private readonly Vector4 PURPLE_DARK = new(0.2f, 0.2f, 0.5f, 1f);
 
+    private string consoleText = "";
+
     public Editor(SimulationRenderer renderer)
     {
         this.renderer = renderer;
@@ -82,6 +84,7 @@ public class Editor
         if (showInspector) ShowInspectWindow(mouseHex);
         if (showCellEditor) ShowCellEditor(selectedCellCoords);
         if (showGridEditor) ShowGridEditor();
+        ShowConsole();
 
         ImGui.PopStyleVar();
     }
@@ -844,6 +847,88 @@ public class Editor
             ImGui.PopID();
         }
 
+        ImGui.End();
+    }
+
+    public void ShowConsole()
+    {
+        var key = "console";
+
+        if (ImGui.Begin("Console", ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.PushID(key);
+
+            if (ImGui.Button("Push Default"))
+            {
+                DebugConsole.Log("Pushing " + DateTime.Now);
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("Push Warning"))
+            {
+                DebugConsole.Warning("Pushing " + DateTime.Now);
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("Push Error"))
+            {
+                DebugConsole.Error("Pushing " + DateTime.Now);
+            }
+
+            ImGui.Separator();
+            // if(ImGui.BeginChild("messages", new Vector2(0, -ImGui.GetFrameHeightWithSpacing())))
+            // {
+            //     foreach (var line in DebugConsole.Lines)
+            //     {
+            //         ImGui.PushStyleColor(ImGuiCol.Text, line.color);
+            //         ImGui.Text(line.ToString());
+            //         ImGui.PopStyleColor();
+            //     }
+            // }
+            // GEMINI GENERATED CODE BELOW
+            
+            if (ImGui.BeginChild("messages", new Vector2(500, 500), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
+            {
+                
+                unsafe
+                {
+                    ImGuiListClipperPtr clipper = new ImGuiListClipperPtr(ImGuiNative.ImGuiListClipper_ImGuiListClipper());
+                    clipper.Begin(DebugConsole.Lines.Count);
+
+                    while (clipper.Step())
+                    {
+                        for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                        {
+                            var line = DebugConsole.Lines[i];
+
+                            ImGui.PushStyleColor(ImGuiCol.Text, line.color);
+                            ImGui.TextUnformatted(line.ToString());
+                            ImGui.PopStyleColor();
+                        }
+                    }
+                    clipper.End();
+                }
+
+                if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
+                {
+                    ImGui.SetScrollHereY(1.0f);
+                }
+            }
+            // GEMINI GENERATED CODE ABOVE
+            ImGui.EndChild();
+
+            ImGui.Separator();
+
+            ImGui.PushItemWidth(400);
+            ImGui.InputText("##input", ref consoleText, 256);
+            ImGui.SameLine();
+
+            if(ImGui.Button("Send") || (ImGui.IsWindowFocused() && ImGui.IsKeyPressed(ImGuiKey.Enter)))
+            {
+                DebugConsole.Log(consoleText);
+                consoleText = "";
+            }
+
+            ImGui.PopID();
+        }
         ImGui.End();
     }
 

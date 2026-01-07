@@ -10,8 +10,8 @@ using static CellularSwarm.Visualizer.Editor;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-int width = 1500;
-int height = 900;
+int width = 1360;
+int height = 830;
 
 bool isFullScreen = false;
 
@@ -54,8 +54,6 @@ var mouseHex = new HexCoords(0, 0);
 var showHexCursor = false;
 var showInspectCursor = false;
 
-Vector3 palette = new(0f, 0f, 0f);
-
 SaveLoadHandler saveLoadHandler = new();
 string saveLoadPath = "default";
 
@@ -84,6 +82,7 @@ List<int> multiplicationTimes = new();
 List<int> diffusionTimes = new();
 List<int> apoptosisTimes = new();
 
+DebugConsole.Log("Starting program loop...");
 while (!Raylib.WindowShouldClose())
 {
     // --- Update ---
@@ -149,13 +148,13 @@ while (!Raylib.WindowShouldClose())
     {
         renderer.Render(mouseHex.q, mouseHex.r, new Color(0f, 0f, 0f, 0.1f), new Color(1f, 1f, 1f, 0.2f));
     }
-    // renderer.Render(mouseHex.q, mouseHex.r, new Color(palette.X, palette.Y, palette.Z, 0.1f), new Color(palette.X, palette.Y, palette.Z, 0.1f));
 
     Raylib.EndMode2D();
 
     DrawUI();
+    // ImGui.ShowDemoWindow();
 
-    Raylib.DrawText($"Cellular Swarm - v0.1.251114", 5, 5, 20, Color.White);
+    Raylib.DrawText($"Cellular Swarm - v{Simulation.VERSION}", 5, 5, 20, Color.White);
     Raylib.DrawText($"{RuntimeInformation.OSArchitecture} - {Environment.OSVersion} - {DateTime.Today:d}\n{Raylib.GetFPS()} FPS - W: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 25, 15, Color.RayWhite);
     // Raylib.DrawText($"FPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}\nParallel: {simulationRenderer.Simulation.useParallel}\nDiagnostic: {diagnosticStep}", 5, 25, 15, Color.RayWhite);
 
@@ -192,9 +191,9 @@ void HandleKeyboardInput()
     SetGridModeWithKeyboard();
 
     if (Raylib.IsKeyPressed(KeyboardKey.F)) ToggleFullscreen();
-    if (Raylib.IsKeyPressed(KeyboardKey.P)) useParallel ^= true;
+    if (Raylib.IsKeyPressed(KeyboardKey.P)) useParallel ^= true; // feelin' fancy y'know :smirk:
     // if (Raylib.IsKeyPressed(KeyboardKey.T)) diagnosticStep ^= true;
-    if (Raylib.IsKeyPressed(KeyboardKey.G)) { simulationStepTimes.Clear(); cellStepTimes.Clear(); multiplicationTimes.Clear(); diffusionTimes.Clear(); apoptosisTimes.Clear(); }
+    // if (Raylib.IsKeyPressed(KeyboardKey.G)) { simulationStepTimes.Clear(); cellStepTimes.Clear(); multiplicationTimes.Clear(); diffusionTimes.Clear(); apoptosisTimes.Clear(); }
 }
 
 void HandleMouseInput()
@@ -454,6 +453,7 @@ void SaveLoadWindow()
 
 void ResetSimulation()
 {
+    DebugConsole.Log("Resetting simulation...");
     simulationRenderer = new(new(DateTime.Now.Millisecond, $"new-{DateTime.Now:fffffff}"));
     editor.renderer = simulationRenderer;
 }

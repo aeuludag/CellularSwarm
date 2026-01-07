@@ -1,10 +1,12 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Reflection.Metadata;
 
 namespace CellularSwarm.Core;
 
 public class Simulation
 {
+    public const string VERSION = "0.1.251221";
     public int id;
     public string name;
 
@@ -192,7 +194,12 @@ public class Simulation
             Cells.Add(freeTiles[i], newCell);
         }
 
-        Diffuser.DiffuseAllOfCollectionParallel(cellsToApoptosis);
+        // Diffuser.DiffuseAllOfCollectionParallel(cellsToApoptosis);
+
+        for (int i = 0; i < diffusionSteps; i++)
+        {
+            Diffuser.DiffuseParallel();
+        }
 
         foreach (var coords in cellsToApoptosis)
         {
@@ -200,11 +207,6 @@ public class Simulation
 
             cell.Apoptosis();
             Cells.Remove(coords);
-        }
-
-        for (int i = 0; i < diffusionSteps; i++)
-        {
-            Diffuser.DiffuseParallel();
         }
 
         Diffuser.ActiveTransportationCollectionParallel(Cells.Keys.ToList());

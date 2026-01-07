@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using CellularSwarm.Core;
 using CellularSwarm.Core.Data;
 using Newtonsoft.Json;
@@ -19,6 +20,8 @@ public class SaveLoadHandler
     }
     public void SaveSimulation(Simulation simulation, SimulationRenderer simulationRenderer, string name = "")
     {
+        DebugConsole.Log($"Exporting simulation [{name}] to path: [{folder}]");
+
         var serializedSimulation = Serializer.Serialize(simulation);
         var serializedSimulationRenderer = VisualizationData.Serialize(simulationRenderer);
 
@@ -31,6 +34,7 @@ public class SaveLoadHandler
     }
     public SimulationRenderer LoadSimulation(string name)
     {
+        DebugConsole.Log($"Loading simulation [{name}] from path: [{folder}]");
         try
         {
             var simulation = Serializer.Deserialize(File.ReadAllText(Path.Combine(folder, $"{name}.json")));
@@ -46,8 +50,11 @@ public class SaveLoadHandler
             badLoad = false;
             return simulationRenderer;
         }
-        catch
+        catch (Exception e)
         {
+            DebugConsole.Error($"Error while loading simulation [{name}]. Raw exception message below.");
+            DebugConsole.Error(e.Message);
+            DebugConsole.Warning("Loading a default simulation.");
             var simulation = new Simulation(0, "default-error");
             badLoad = true;
             return new SimulationRenderer(simulation);
