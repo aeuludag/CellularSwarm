@@ -8,7 +8,7 @@ public static class Themes
     // gpt generated
     public static void ApplyTheme1()
     {
-        DebugConsole.Log("Applying Theme1...");
+        DebugConsole.Info("Applying Theme1.", "THEME");
         var style = ImGui.GetStyle();
         var colors = style.Colors;
 

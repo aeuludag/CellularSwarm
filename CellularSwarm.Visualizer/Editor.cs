@@ -3,6 +3,7 @@ using Raylib_cs;
 using System.Numerics;
 using CellularSwarm.Core;
 using ImGuiNET;
+using IconFonts;
 
 namespace CellularSwarm.Visualizer;
 
@@ -23,33 +24,52 @@ public class Editor
     public bool showCellEditor = false;
     public bool showGridEditor = true;
     public bool showVisualizationEditor = false;
+    public bool showConsole = false;
 
     public HexCoords selectedCellCoords = new(int.MaxValue, int.MaxValue);
 
     private readonly static Random random = new();
     Dictionary<string, int> selectorStates = new(); // help by gpt
-    private readonly Vector4 RED_WARNING = new(0.9f, 0f, 0f, 1f);
-    private readonly Vector4 RED_LIGHT = new(1f, 0.7f, 0.7f, 1f);
-    private readonly Vector4 RED_DARK = new(0.7f, 0.2f, 0.2f, 1f);
-    private readonly Vector4 GREEN_LIGHT = new(0.7f, 1f, 0.7f, 1f);
-    private readonly Vector4 GREEN_DARK = new(0.2f, 0.7f, 0.2f, 1f);
-    private readonly Vector4 BLUE_LIGHT = new(0.7f, 0.7f, 1f, 1f);
-    private readonly Vector4 BLUE_DARK = new(0.3f, 0f, 0f, 1f);
-    private readonly Vector4 PURPLE_DARK = new(0.2f, 0.2f, 0.5f, 1f);
+    public static readonly Vector4 RED_WARNING = new(0.9f, 0f, 0f, 1f);
+    public static readonly Vector4 RED_LIGHT = new(1f, 0.7f, 0.7f, 1f);
+    public static readonly Vector4 RED_DARK = new(0.7f, 0.2f, 0.2f, 1f);
+    public static readonly Vector4 GREEN_LIGHT = new(0.7f, 1f, 0.7f, 1f);
+    public static readonly Vector4 GREEN_DARK = new(0.2f, 0.7f, 0.2f, 1f);
+    public static readonly Vector4 BLUE_LIGHT = new(0.7f, 0.7f, 1f, 1f);
+    public static readonly Vector4 BLUE_DARK = new(0.3f, 0f, 0f, 1f);
+    public static readonly Vector4 PURPLE_DARK = new(0.2f, 0.2f, 0.5f, 1f);
 
     private string consoleText = "";
 
     public Editor(SimulationRenderer renderer)
     {
         this.renderer = renderer;
+        DebugConsole.Instance.Renderer = renderer;
     }
 
     public void ShowWindowManager(HexCoords mouseHex)
     {
+        var size = ImGui.GetIO().DisplaySize;
+        var w = size.X;
+        var h = size.Y;
+
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(8, 8));
 
+        WinPos(16, h - 16, 0, 1);
         if (ImGui.Begin("Window Manager", ImGuiWindowFlags.AlwaysAutoResize))
         {
+            if (ImGui.Button(FontAwesome6.Terminal))
+            {
+                showConsole ^= true;
+            }
+            HoverTooltip("Console");
+            ImGui.SameLine();
+            if(ImGui.Button(FontAwesome6.Gear))
+            {
+                ShowSettings();
+            }
+            HoverTooltip("Settings");
+
             ImGui.Checkbox("Visualization Editor", ref showVisualizationEditor);
             ImGui.Checkbox("Morphogen Editor", ref showMorphogenEditor);
             ImGui.Checkbox("Cell Type Editor", ref showCellTypeEditor);
@@ -57,6 +77,7 @@ public class Editor
             ImGui.Checkbox("Gene Condition Editor", ref showGeneConditionEditor);
             ImGui.Checkbox("Gene Editor", ref showGeneEditor);
             ImGui.Checkbox("Simulation Editor", ref showSimulationEditor);
+
             if (ImGui.Button("Hide All"))
             {
                 showMorphogenEditor = false;
@@ -65,26 +86,34 @@ public class Editor
                 showGeneConditionEditor = false;
                 showGeneEditor = false;
                 showSimulationEditor = false;
+                showVisualizationEditor = false;
+                showConsole = false;
             }
+
             ImGui.SameLine();
+
             if (ImGui.Button("Reset Windows"))
             {
-
+                DebugConsole.Info("Resetting window positions.", "EDITOR");
             }
         }
         ImGui.End();
 
-        if (showVisualizationEditor) ShowVisualizationEditor();
-        if (showMorphogenEditor) ShowMorphogenEditor();
-        if (showCellTypeEditor) ShowCellTypeEditor();
-        if (showGeneActionEditor) ShowGeneActionEditor();
-        if (showGeneConditionEditor) ShowGeneConditionEditor();
-        if (showGeneEditor) ShowGeneEditor();
-        if (showSimulationEditor) ShowSimulationEditor();
-        if (showInspector) ShowInspectWindow(mouseHex);
-        if (showCellEditor) ShowCellEditor(selectedCellCoords);
-        if (showGridEditor) ShowGridEditor();
-        ShowConsole();
+        // DebugConsole.Log(size.X.ToString(), "w");
+        // DebugConsole.Log(size.Y.ToString(), "h");
+
+        if      (showVisualizationEditor)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowVisualizationEditor(); }
+        if          (showMorphogenEditor)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowMorphogenEditor(); }
+        if           (showCellTypeEditor)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowCellTypeEditor(); }
+        if         (showGeneActionEditor)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowGeneActionEditor(); }
+        if      (showGeneConditionEditor)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowGeneConditionEditor(); }
+        if               (showGeneEditor)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowGeneEditor(); }
+        if         (showSimulationEditor)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowSimulationEditor(); }
+        if                (showInspector)   { ShowInspectWindow(mouseHex); }
+        if               (showCellEditor)   { ShowCellEditor(selectedCellCoords); }
+        if               (showGridEditor)   { WinPos(w - 16, h - 16, 1, 1); ShowGridEditor(); }
+        if                  (showConsole)   { WinPos(w/2, h/2, 0.5f, 0.5f); ImGui.SetNextWindowSize(new Vector2(400, 600), ImGuiCond.Once); ShowConsole(); }
+        // tehehe
 
         ImGui.PopStyleVar();
     }
@@ -192,13 +221,13 @@ public class Editor
             var max = simulation.maxConcentration;
 
             if (ImGui.InputText($"Name", ref name, 32)) { morphogen.name = name; }
-            if (ImGui.SliderFloat($"##diffusionSlider", ref difFac, 0f, 1f)) { morphogen.diffusionFactor = difFac; }
-            ImGui.SameLine();
-            WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat($"Diffusion Factor", ref difFac)) { difFac = Math.Clamp(difFac, 0f, 1f); morphogen.diffusionFactor = difFac; } });
+            if (ImGui.SliderFloat($"Diffusion Factor##diffusionSlider", ref difFac, 0f, 1f)) { morphogen.diffusionFactor = Math.Clamp(difFac, 0f, 1f); }
+            // ImGui.SameLine();
+            // WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat($"Diffusion Factor", ref difFac)) { difFac = Math.Clamp(difFac, 0f, 1f); morphogen.diffusionFactor = difFac; } });
             HoverTooltip("How fast the morphogen flows & diffuses.");
-            if (ImGui.SliderFloat($"##decaySlider", ref decFac, 0f, 1f)) { morphogen.decayFactor = decFac; }
-            ImGui.SameLine();
-            WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat($"Decay Factor", ref decFac)) { decFac = Math.Clamp(decFac, 0f, 1f); morphogen.decayFactor = decFac; } });
+            if (ImGui.SliderFloat($"Decay Factor##decaySlider", ref decFac, 0f, 1f)) { morphogen.decayFactor = Math.Clamp(decFac, 0f, 1f); }
+            // ImGui.SameLine();
+            // WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat($"Decay Factor", ref decFac)) { decFac = Math.Clamp(decFac, 0f, 1f); morphogen.decayFactor = decFac; } });
 
             HoverTooltip("How fast the morphogen decays.");
 
@@ -395,9 +424,9 @@ public class Editor
                     ImGui.PopItemWidth();
 
                     ImGui.TableSetColumnIndex(2);
-                    WidthX(150, () => { ImGui.SliderFloat($"##ThresholdSlider", ref thresholdConcentration, 0f, simulation.maxConcentration); });
-                    ImGui.SameLine();
-                    WidthX(ImGui.CalcTextSize($"{simulation.maxConcentration:F3}").X + 20, () => { if (ImGui.InputFloat($"##ThresholdInput", ref thresholdConcentration)) { thresholdConcentration = Math.Clamp(thresholdConcentration, 0f, simulation.maxConcentration); } });
+                    WidthX(150, () => { if(ImGui.SliderFloat($"Threshold##ThresholdSlider", ref thresholdConcentration, 0f, simulation.maxConcentration)) {thresholdConcentration = Math.Clamp(thresholdConcentration, 0f, simulation.maxConcentration); } });
+                    // ImGui.SameLine();
+                    // WidthX(ImGui.CalcTextSize($"{simulation.maxConcentration:F3}").X + 20, () => { if (ImGui.InputFloat($"##ThresholdInput", ref thresholdConcentration)) { thresholdConcentration = Math.Clamp(thresholdConcentration, 0f, simulation.maxConcentration); } });
                 }
                 ImGui.EndTable();
 
@@ -797,7 +826,7 @@ public class Editor
                 case 0: // Three Morphogens
                     renderer.visualizationType = SimulationRenderer.VisualizationType.ThreeMorphogens;
 
-                    ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, simulation.maxConcentration);
+                    if(ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, simulation.maxConcentration)) {renderer.amplifier = Math.Clamp(renderer.amplifier, 1f, simulation.maxConcentration); }
 
                     ImGui.Separator();
 
@@ -820,7 +849,7 @@ public class Editor
                     break;
                 case 1: // Single Morphogen
                     renderer.visualizationType = SimulationRenderer.VisualizationType.SingleMorphogen;
-                    ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, simulation.maxConcentration);
+                    if(ImGui.SliderFloat("Amplifier", ref renderer.amplifier, 1f, simulation.maxConcentration)) {renderer.amplifier = Math.Clamp(renderer.amplifier, 1f, simulation.maxConcentration); }
 
                     ImGui.Separator();
 
@@ -852,26 +881,40 @@ public class Editor
 
     public void ShowConsole()
     {
+        DebugConsole.Instance.Renderer = renderer;
+        
         var key = "console";
 
-        if (ImGui.Begin("Console", ImGuiWindowFlags.AlwaysAutoResize))
+        // ImGui.SetNextWindowSize(new Vector2(0, 500));
+        if (ImGui.Begin("Console"))
         {
             ImGui.PushID(key);
 
-            if (ImGui.Button("Push Default"))
-            {
-                DebugConsole.Log("Pushing " + DateTime.Now);
-            }
+            ImGui.PushItemWidth(ImGui.GetWindowWidth() - 64);
+            ImGui.InputText("##input", ref consoleText, 256);
             ImGui.SameLine();
-            if (ImGui.Button("Push Warning"))
+
+            if (ImGui.Button("Send") || (ImGui.IsWindowFocused() && ImGui.IsKeyPressed(ImGuiKey.Enter)))
             {
-                DebugConsole.Warning("Pushing " + DateTime.Now);
+                DebugConsole.Send(consoleText);
+                consoleText = "";
+                ImGui.SetKeyboardFocusHere(-1);
             }
-            ImGui.SameLine();
-            if (ImGui.Button("Push Error"))
-            {
-                DebugConsole.Error("Pushing " + DateTime.Now);
-            }
+
+            // if (ImGui.Button("Push Default"))
+            // {
+            //     DebugConsole.Log("Pushing " + DateTime.Now, "EDITOR");
+            // }
+            // ImGui.SameLine();
+            // if (ImGui.Button("Push Warning"))
+            // {
+            //     DebugConsole.Warning("Pushing " + DateTime.Now, "EDITOR");
+            // }
+            // ImGui.SameLine();
+            // if (ImGui.Button("Push Error"))
+            // {
+            //     DebugConsole.Error("Pushing " + DateTime.Now, "EDITOR");
+            // }
 
             ImGui.Separator();
             // if(ImGui.BeginChild("messages", new Vector2(0, -ImGui.GetFrameHeightWithSpacing())))
@@ -883,15 +926,18 @@ public class Editor
             //         ImGui.PopStyleColor();
             //     }
             // }
-            // GEMINI GENERATED CODE BELOW
-            
-            if (ImGui.BeginChild("messages", new Vector2(500, 500), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
+
+            // (partially) GEMINI GENERATED CODE BELOW
+            if (ImGui.BeginChild("messages", new Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
             {
-                
                 unsafe
                 {
                     ImGuiListClipperPtr clipper = new ImGuiListClipperPtr(ImGuiNative.ImGuiListClipper_ImGuiListClipper());
                     clipper.Begin(DebugConsole.Lines.Count);
+
+                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 0.5f));
+                    ImGui.SeparatorText("begin-console");
+                    ImGui.PopStyleColor();
 
                     while (clipper.Step())
                     {
@@ -904,10 +950,16 @@ public class Editor
                             ImGui.PopStyleColor();
                         }
                     }
+                    // ImGui.TextUnformatted("");
+                    // ImGui.PushStyleVar(ImGuiStyleVar.SeparatorTextAlign, 0);
+                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 0.5f));
+                    ImGui.SeparatorText("end-of-console");
+                    ImGui.PopStyleColor();
+                    // ImGui.PopStyleVar();
                     clipper.End();
                 }
 
-                if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
+                if (MathF.Abs(ImGui.GetScrollY() - ImGui.GetScrollMaxY()) <= 0.1f)
                 {
                     ImGui.SetScrollHereY(1.0f);
                 }
@@ -915,21 +967,17 @@ public class Editor
             // GEMINI GENERATED CODE ABOVE
             ImGui.EndChild();
 
-            ImGui.Separator();
+            // ImGui.Separator();
 
-            ImGui.PushItemWidth(400);
-            ImGui.InputText("##input", ref consoleText, 256);
-            ImGui.SameLine();
-
-            if(ImGui.Button("Send") || (ImGui.IsWindowFocused() && ImGui.IsKeyPressed(ImGuiKey.Enter)))
-            {
-                DebugConsole.Log(consoleText);
-                consoleText = "";
-            }
 
             ImGui.PopID();
         }
         ImGui.End();
+    }
+
+    public void ShowSettings()
+    {
+        
     }
 
     // GENERICS
@@ -1031,9 +1079,9 @@ public class Editor
                 ImGui.Text(getName(dictKey));
 
                 ImGui.TableSetColumnIndex(1);
-                WidthX(200, () => { if (ImGui.SliderFloat("##valueSlider", ref value, min, max)) dict[dictKey] = value; });
-                ImGui.SameLine();
-                WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat("##valueInput", ref value)) { value = Math.Clamp(value, min, max); dict[dictKey] = value; } });
+                WidthX(200, () => { if (ImGui.SliderFloat("##valueSlider", ref value, min, max)) dict[dictKey] = value = Math.Clamp(value, min, max); });
+                // ImGui.SameLine();
+                // WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat("##valueInput", ref value)) { value = Math.Clamp(value, min, max); dict[dictKey] = value; } });
 
                 ImGui.TableSetColumnIndex(2);
                 RedButton(() => { if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Remove")) dict.Remove(dictKey); });
@@ -1254,6 +1302,11 @@ public class Editor
             ImGui.Text(text);
             ImGui.EndTooltip();
         }
+    }
+
+    public static void WinPos(float x, float y, float px, float py)
+    {
+        ImGui.SetNextWindowPos(new Vector2(x, y), ImGuiCond.Once, new Vector2(px, py));
     }
 
     public enum GridState

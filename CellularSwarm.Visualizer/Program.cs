@@ -64,8 +64,6 @@ Simulation GetSimulation() { return simulationRenderer.Simulation; }
 
 var editor = new Editor(simulationRenderer);
 
-ResetSimulation();
-
 var camMin = 0.01f;
 var camMax = 2f;
 
@@ -73,7 +71,19 @@ bool useParallel = true;
 
 rlImGui.Setup(true);
 
+unsafe
+{
+    ImGui.GetIO().NativePtr->IniFilename = null;
+}
+
+DebugConsole.Log(new Vector4(1.0f, 0.2f, 0.2f, 1f), "Cellular Swarm", "aeuludag");
+DebugConsole.Log(new Vector4(0.9f, 0.6f, 0.2f, 1f), $"Simulation version: v{Simulation.VERSION}", "RENDERER");
+DebugConsole.Log(new Vector4(0.6f, 0.8f, 0.2f, 1f), $"Simulation Renderer version: v{SimulationRenderer.VERSION}", "RENDERER");
+DebugConsole.Log(new Vector4(0.4f, 0.8f, 0.5f, 1f), $"OS Architecture: {RuntimeInformation.OSArchitecture}", "RENDERER");
+DebugConsole.Log(new Vector4(0.2f, 0.6f, 0.9f, 1f), $"OS Version: {Environment.OSVersion}", "RENDERER");
+
 Themes.ApplyTheme1();
+ResetSimulation();
 
 List<int> UIDrawTimes = new();
 List<int> simulationStepTimes = new();
@@ -82,7 +92,7 @@ List<int> multiplicationTimes = new();
 List<int> diffusionTimes = new();
 List<int> apoptosisTimes = new();
 
-DebugConsole.Log("Starting program loop...");
+DebugConsole.Info("Starting program loop.", "RENDERER");
 while (!Raylib.WindowShouldClose())
 {
     // --- Update ---
@@ -152,10 +162,8 @@ while (!Raylib.WindowShouldClose())
     Raylib.EndMode2D();
 
     DrawUI();
-    // ImGui.ShowDemoWindow();
 
-    Raylib.DrawText($"Cellular Swarm - v{Simulation.VERSION}", 5, 5, 20, Color.White);
-    Raylib.DrawText($"{RuntimeInformation.OSArchitecture} - {Environment.OSVersion} - {DateTime.Today:d}\n{Raylib.GetFPS()} FPS - W: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 25, 15, Color.RayWhite);
+    Raylib.DrawText($"Cellular Swarm - v{Simulation.VERSION} - {RuntimeInformation.OSArchitecture} - {Environment.OSVersion} - {DateTime.Today:d} - {Raylib.GetFPS()} FPS", 5, 5, 15, Color.White);
     // Raylib.DrawText($"FPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}\nParallel: {simulationRenderer.Simulation.useParallel}\nDiagnostic: {diagnosticStep}", 5, 25, 15, Color.RayWhite);
 
     Raylib.EndDrawing();
@@ -174,9 +182,13 @@ void DrawUI()
 {
     rlImGui.Begin();
 
+    Editor.WinPos(width - 16, 16, 1, 0);
     Controls();
+    
+    Editor.WinPos(width - 16, 96, 1, 0);
     SaveLoadWindow();
     editor.ShowWindowManager(mouseHex);
+    // ImGui.ShowDemoWindow();
 
     rlImGui.End();
 }
@@ -288,10 +300,10 @@ void SetZoomWithKeyboard()
 void SetGridModeWithKeyboard()
 {
 
-    if (Raylib.IsKeyPressed(KeyboardKey.One)) { editor.gridState = GridState.Move; }
-    if (Raylib.IsKeyPressed(KeyboardKey.Two)) { editor.gridState = GridState.Brush; }
+    if (Raylib.IsKeyPressed(KeyboardKey.One))   { editor.gridState = GridState.Move; }
+    if (Raylib.IsKeyPressed(KeyboardKey.Two))   { editor.gridState = GridState.Brush; }
     if (Raylib.IsKeyPressed(KeyboardKey.Three)) { editor.gridState = GridState.Erase; }
-    if (Raylib.IsKeyPressed(KeyboardKey.Four)) { editor.gridState = GridState.Inspect; }
+    if (Raylib.IsKeyPressed(KeyboardKey.Four))  { editor.gridState = GridState.Inspect; }
 }
 
 void ControlSimulationWithKeyboard()
@@ -300,13 +312,16 @@ void ControlSimulationWithKeyboard()
     {
         if (Raylib.IsKeyDown(KeyboardKey.LeftShift))
         {
+            DebugConsole.Info("Simulation step.", "RENDERER");
             play = false;
             Step();
             return;
         }
         play = !play;
+
+        DebugConsole.Info(play ? "Resuming simulation." : "Pausing simulation.", "RENDERER");
     }
-    if (Raylib.IsKeyPressed(KeyboardKey.C)) { simulationRenderer.ClearGrid(); }
+    if (Raylib.IsKeyPressed(KeyboardKey.C)) { DebugConsole.Info("Clearing grid.", "RENDERER"); simulationRenderer.ClearGrid(); }
     if (Raylib.IsKeyPressed(KeyboardKey.R)) { ResetSimulation(); }
 }
 
@@ -402,16 +417,19 @@ void Controls()
         if (ImGui.Button(play ? IconFonts.FontAwesome6.Pause + " Pause" : IconFonts.FontAwesome6.Play + " Play"))
         {
             play = !play;
+            DebugConsole.Info(play ? "Resuming simulation." : "Pausing simulation.", "RENDERER");
         }
         ImGui.SameLine();
         if (ImGui.Button(IconFonts.FontAwesome6.ArrowRight + " Step"))
         {
             play = false;
+            DebugConsole.Info("Simulation step.", "RENDERER");
             Step();
         }
         ImGui.SameLine();
         if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Clear"))
         {
+            DebugConsole.Info("Clearing grid.", "RENDERER");
             simulationRenderer.ClearGrid();
         }
         ImGui.SameLine();
@@ -453,7 +471,7 @@ void SaveLoadWindow()
 
 void ResetSimulation()
 {
-    DebugConsole.Log("Resetting simulation...");
+    DebugConsole.Info("Simulation reset.", "RENDERER");
     simulationRenderer = new(new(DateTime.Now.Millisecond, $"new-{DateTime.Now:fffffff}"));
     editor.renderer = simulationRenderer;
 }
