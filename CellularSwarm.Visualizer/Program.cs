@@ -7,11 +7,14 @@ using IconFonts;
 using CellularSwarm.Core;
 using CellularSwarm.Visualizer;
 using static CellularSwarm.Visualizer.Editor;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
+using Newtonsoft.Json;
 
-int width = 1360;
-int height = 830;
+ConfigHandler.LoadConfig();
+
+int width = ConfigHandler.Config.width;
+int height = ConfigHandler.Config.height;
 
 bool isFullScreen = false;
 
@@ -21,9 +24,10 @@ float hexSize = 50f;
 
 Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
 Raylib.InitWindow(width, height, "Cellular Swarm");
-Raylib.SetWindowPosition(0, 0);
+Raylib.SetWindowPosition(16, 16);
 Raylib.SetWindowMinSize(400, 400);
 Raylib.SetTargetFPS(60);
+Raylib.SetExitKey(KeyboardKey.Null);
 // // Image icon = Raylib.LoadImage("icon.png");
 // Image icon = Raylib.GenImageColor(32, 32, Color.Red);
 // Raylib.SetWindowIcon(icon);
@@ -67,32 +71,43 @@ var editor = new Editor(simulationRenderer);
 var camMin = 0.01f;
 var camMax = 2f;
 
-bool useParallel = true;
-
 rlImGui.Setup(true);
 
+// byte[] iniNameBuffer = System.Text.Encoding.ASCII.GetBytes("custom_layout.ini\0");
 unsafe
 {
-    ImGui.GetIO().NativePtr->IniFilename = null;
+    // if (ConfigHandler.Config.rememberWindows)
+    // {
+    //     fixed (byte* p = iniNameBuffer)
+    //     {
+    //         ImGui.GetIO().NativePtr->IniFilename = p;
+    //     }
+    // }
+    // else
+    // {
+        ImGui.GetIO().NativePtr->IniFilename = null;
+    // }
 }
 
-DebugConsole.Log(new Vector4(1.0f, 0.2f, 0.2f, 1f), "Cellular Swarm", "aeuludag");
-DebugConsole.Log(new Vector4(0.9f, 0.6f, 0.2f, 1f), $"Simulation version: v{Simulation.VERSION}", "RENDERER");
-DebugConsole.Log(new Vector4(0.6f, 0.8f, 0.2f, 1f), $"Simulation Renderer version: v{SimulationRenderer.VERSION}", "RENDERER");
-DebugConsole.Log(new Vector4(0.4f, 0.8f, 0.5f, 1f), $"OS Architecture: {RuntimeInformation.OSArchitecture}", "RENDERER");
-DebugConsole.Log(new Vector4(0.2f, 0.6f, 0.9f, 1f), $"OS Version: {Environment.OSVersion}", "RENDERER");
-
-Themes.ApplyTheme1();
+Themes.ApplyMorph();
+Themes.AllThemes[ConfigHandler.Config.themeIndex].Invoke();
 ResetSimulation();
 
-List<int> UIDrawTimes = new();
-List<int> simulationStepTimes = new();
-List<int> cellStepTimes = new();
-List<int> multiplicationTimes = new();
-List<int> diffusionTimes = new();
-List<int> apoptosisTimes = new();
+DebugConsole.Log(new Vector4(1.0f, 0.2f, 0.2f, 1f), "Cellular Swarm", "aeuludag");
+DebugConsole.Log(new Vector4(0.9f, 0.6f, 0.2f, 1f), $"Simulation version: v{Simulation.VERSION}", "aeuludag");
+DebugConsole.Log(new Vector4(0.6f, 0.8f, 0.2f, 1f), $"Simulation Renderer version: v{SimulationRenderer.VERSION}", "aeuludag");
+DebugConsole.Log(new Vector4(0.4f, 0.8f, 0.5f, 1f), $"OS Architecture: {RuntimeInformation.OSArchitecture}", "aeuludag");
+DebugConsole.Log(new Vector4(0.2f, 0.6f, 0.9f, 1f), $"OS Version: {Environment.OSVersion}", "aeuludag");
+
+// List<int> UIDrawTimes = new();
+// List<int> simulationStepTimes = new();
+// List<int> cellStepTimes = new();
+// List<int> multiplicationTimes = new();
+// List<int> diffusionTimes = new();
+// List<int> apoptosisTimes = new();
 
 DebugConsole.Info("Starting program loop.", "RENDERER");
+
 while (!Raylib.WindowShouldClose())
 {
     // --- Update ---
@@ -164,19 +179,23 @@ while (!Raylib.WindowShouldClose())
     DrawUI();
 
     Raylib.DrawText($"Cellular Swarm - v{Simulation.VERSION} - {RuntimeInformation.OSArchitecture} - {Environment.OSVersion} - {DateTime.Today:d} - {Raylib.GetFPS()} FPS", 5, 5, 15, Color.White);
-    // Raylib.DrawText($"FPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}\nParallel: {simulationRenderer.Simulation.useParallel}\nDiagnostic: {diagnosticStep}", 5, 25, 15, Color.RayWhite);
+    // Raylib.DrawText($"FPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 25, 15, Color.RayWhite);
 
     Raylib.EndDrawing();
 }
 
-void Step()
-{
-    if (useParallel) GetSimulation().StepParallel();
-    else GetSimulation().Step();
-}
+ConfigHandler.Config.width = Raylib.GetScreenWidth();
+ConfigHandler.Config.height = Raylib.GetScreenHeight();
+
+ConfigHandler.SaveConfig();
 
 rlImGui.Shutdown();
 Raylib.CloseWindow();
+
+void Step()
+{
+    simulationRenderer.Step();
+}
 
 void DrawUI()
 {
@@ -184,7 +203,7 @@ void DrawUI()
 
     Editor.WinPos(width - 16, 16, 1, 0);
     Controls();
-    
+
     Editor.WinPos(width - 16, 96, 1, 0);
     SaveLoadWindow();
     editor.ShowWindowManager(mouseHex);
@@ -203,7 +222,7 @@ void HandleKeyboardInput()
     SetGridModeWithKeyboard();
 
     if (Raylib.IsKeyPressed(KeyboardKey.F)) ToggleFullscreen();
-    if (Raylib.IsKeyPressed(KeyboardKey.P)) useParallel ^= true; // feelin' fancy y'know :smirk:
+    // if (Raylib.IsKeyPressed(KeyboardKey.P)) useParallel ^= true; // feelin' fancy y'know :smirk:
     // if (Raylib.IsKeyPressed(KeyboardKey.T)) diagnosticStep ^= true;
     // if (Raylib.IsKeyPressed(KeyboardKey.G)) { simulationStepTimes.Clear(); cellStepTimes.Clear(); multiplicationTimes.Clear(); diffusionTimes.Clear(); apoptosisTimes.Clear(); }
 }
@@ -300,10 +319,10 @@ void SetZoomWithKeyboard()
 void SetGridModeWithKeyboard()
 {
 
-    if (Raylib.IsKeyPressed(KeyboardKey.One))   { editor.gridState = GridState.Move; }
-    if (Raylib.IsKeyPressed(KeyboardKey.Two))   { editor.gridState = GridState.Brush; }
+    if (Raylib.IsKeyPressed(KeyboardKey.One)) { editor.gridState = GridState.Move; }
+    if (Raylib.IsKeyPressed(KeyboardKey.Two)) { editor.gridState = GridState.Brush; }
     if (Raylib.IsKeyPressed(KeyboardKey.Three)) { editor.gridState = GridState.Erase; }
-    if (Raylib.IsKeyPressed(KeyboardKey.Four))  { editor.gridState = GridState.Inspect; }
+    if (Raylib.IsKeyPressed(KeyboardKey.Four)) { editor.gridState = GridState.Inspect; }
 }
 
 void ControlSimulationWithKeyboard()
@@ -414,6 +433,7 @@ void Controls()
     {
         ImGui.SetWindowFontScale(scale);
         ImGui.Text(play ? "Playing..." : "Stopped");
+        ImGui.Separator();
         if (ImGui.Button(play ? IconFonts.FontAwesome6.Pause + " Pause" : IconFonts.FontAwesome6.Play + " Play"))
         {
             play = !play;
@@ -464,6 +484,7 @@ void SaveLoadWindow()
             ImGui.Text($"No such file.");
             ImGui.PopStyleColor();
         }
+        ImGui.Separator();
         ImGui.InputText(".json", ref saveLoadPath, 64);
     }
     ImGui.End();
@@ -474,4 +495,5 @@ void ResetSimulation()
     DebugConsole.Info("Simulation reset.", "RENDERER");
     simulationRenderer = new(new(DateTime.Now.Millisecond, $"new-{DateTime.Now:fffffff}"));
     editor.renderer = simulationRenderer;
+    simulationRenderer.SetParallel();
 }

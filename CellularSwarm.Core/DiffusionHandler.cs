@@ -333,6 +333,29 @@ public class DiffusionHandler
         return delta;
     }
 
+    public void ActiveTransportationCollection(List<HexCoords> cellsThatTransport)
+    {
+        var morphogenDelta = new Dictionary<(HexCoords, int), float>();
+
+        foreach (var coords in cellsThatTransport)
+        {
+            var delta = ActiveTransportationSingular(coords);
+
+            foreach (var kv in delta)
+            {
+                if (morphogenDelta.TryGetValue(kv.Key, out var existing))
+                    morphogenDelta[kv.Key] = existing + kv.Value;
+                else
+                    morphogenDelta[kv.Key] = kv.Value;
+            }
+        }
+
+        foreach (((HexCoords coords, int morphogenId), float amount) in morphogenDelta)
+        {
+            Simulation.Cells[coords].AddMorphogen(morphogenId, amount);
+        }
+    }
+
     public void ActiveTransportationCollectionParallel(List<HexCoords> cellsThatTransport)
     {
         var allLocalDeltas = new List<Dictionary<(HexCoords, int), float>>();
@@ -371,7 +394,7 @@ public class DiffusionHandler
             Simulation.Cells[coords].AddMorphogen(morphogenId, amount);
         }
     }
-    
+
     public Dictionary<(HexCoords, int), float> ActiveTransportationSingular(HexCoords coords)
     {
         var delta = new Dictionary<(HexCoords, int), float>();

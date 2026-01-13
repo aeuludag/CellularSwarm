@@ -4,6 +4,7 @@ using System.Numerics;
 using CellularSwarm.Core;
 using ImGuiNET;
 using IconFonts;
+using System.Diagnostics;
 
 namespace CellularSwarm.Visualizer;
 
@@ -25,6 +26,8 @@ public class Editor
     public bool showGridEditor = true;
     public bool showVisualizationEditor = false;
     public bool showConsole = false;
+    public bool showSettings = true;
+    public bool showWelcome = false;
 
     public HexCoords selectedCellCoords = new(int.MaxValue, int.MaxValue);
 
@@ -37,7 +40,7 @@ public class Editor
     public static readonly Vector4 GREEN_DARK = new(0.2f, 0.7f, 0.2f, 1f);
     public static readonly Vector4 BLUE_LIGHT = new(0.7f, 0.7f, 1f, 1f);
     public static readonly Vector4 BLUE_DARK = new(0.3f, 0f, 0f, 1f);
-    public static readonly Vector4 PURPLE_DARK = new(0.2f, 0.2f, 0.5f, 1f);
+    public static readonly Vector4 PURPLE_DARK = new(0.5f, 0.4f, 0.7f, 1f);
 
     private string consoleText = "";
 
@@ -58,17 +61,6 @@ public class Editor
         WinPos(16, h - 16, 0, 1);
         if (ImGui.Begin("Window Manager", ImGuiWindowFlags.AlwaysAutoResize))
         {
-            if (ImGui.Button(FontAwesome6.Terminal))
-            {
-                showConsole ^= true;
-            }
-            HoverTooltip("Console");
-            ImGui.SameLine();
-            if(ImGui.Button(FontAwesome6.Gear))
-            {
-                ShowSettings();
-            }
-            HoverTooltip("Settings");
 
             ImGui.Checkbox("Visualization Editor", ref showVisualizationEditor);
             ImGui.Checkbox("Morphogen Editor", ref showMorphogenEditor);
@@ -88,14 +80,27 @@ public class Editor
                 showSimulationEditor = false;
                 showVisualizationEditor = false;
                 showConsole = false;
+                showSettings = false;
+                showWelcome = false;
             }
-
             ImGui.SameLine();
-
-            if (ImGui.Button("Reset Windows"))
+            if(ImGui.Button(FontAwesome6.Newspaper))
             {
-                DebugConsole.Info("Resetting window positions.", "EDITOR");
+                showWelcome ^= true;
             }
+            HoverTooltip("Welcome");
+            ImGui.SameLine();
+            if(ImGui.Button(FontAwesome6.Gear))
+            {
+                showSettings ^= true;
+            }
+            HoverTooltip("Settings");
+            ImGui.SameLine();
+            if (ImGui.Button(FontAwesome6.Terminal))
+            {
+                showConsole ^= true;
+            }
+            HoverTooltip("Console");
         }
         ImGui.End();
 
@@ -112,7 +117,9 @@ public class Editor
         if                (showInspector)   { ShowInspectWindow(mouseHex); }
         if               (showCellEditor)   { ShowCellEditor(selectedCellCoords); }
         if               (showGridEditor)   { WinPos(w - 16, h - 16, 1, 1); ShowGridEditor(); }
-        if                  (showConsole)   { WinPos(w/2, h/2, 0.5f, 0.5f); ImGui.SetNextWindowSize(new Vector2(400, 600), ImGuiCond.Once); ShowConsole(); }
+        if                  (showConsole)   { WinPos(w/2, h/2, 0.5f, 0.5f); ImGui.SetNextWindowSize(new Vector2(550, 600), ImGuiCond.Once); ShowConsole(); }
+        if                 (showSettings)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowSettings(); }
+        if                 (showWelcome)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowWelcome(); }
         // tehehe
 
         ImGui.PopStyleVar();
@@ -188,7 +195,7 @@ public class Editor
         var key = "morphogenEditor";
         var simulation = renderer.Simulation;
         var morphogens = simulation.Morphogens;
-        var morphogenId = -1;
+        var morphogenId = morphogens.Keys.ToArray()[0];
 
         if (ImGui.Begin("Morphogen Editor", ImGuiWindowFlags.AlwaysAutoResize))
         {
@@ -629,7 +636,13 @@ public class Editor
     {
         var simulation = renderer.Simulation;
 
-        ImGui.SetNextWindowPos(ImGui.GetMousePos() + new Vector2(10, 10), ImGuiCond.Always);
+        if(ImGui.GetMousePos().Y > Raylib.GetScreenHeight() / 2)
+        {
+            ImGui.SetNextWindowPos(ImGui.GetMousePos() + new Vector2(10, -10), ImGuiCond.Always, new Vector2(0f, 1f));
+        } else
+        {
+            ImGui.SetNextWindowPos(ImGui.GetMousePos() + new Vector2(10, 10), ImGuiCond.Always);
+        }
         if (ImGui.Begin("Inspector", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing))
         {
             ImGui.PushID("inspector");
@@ -662,21 +675,47 @@ public class Editor
 
             ImGui.SeparatorText("Genes");
 
-            foreach (var gene in simulation.Genes.Values)
+            if(ImGui.IsKeyDown(ImGuiKey.LeftShift))
             {
-                if (gene.ShouldBeActive(cell))
+                foreach (var gene in simulation.Genes.Values)
                 {
-                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.3f, 1f, 0.3f, 1f));
+                    if (gene.ShouldBeActive(cell))
+                    {
+                        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.3f, 1f, 0.3f, 1f));
+                    }
+                    else
+                    {
+                        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.3f, 0.3f, 1f));
+                    }
+                    ImGui.PushID($"gene{gene.id}");
+                    ImGui.Text($"{gene.name}");
+                    ImGui.PopID();
+                    ImGui.PopStyleColor();
                 }
-                else
+            } else
+            {
+                float activeCount = 0;
+                float inactiveCount = 0;
+                foreach (var gene in simulation.Genes.Values)
                 {
-                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.3f, 0.3f, 1f));
+                    if (gene.ShouldBeActive(cell))
+                    {
+                        activeCount++;
+                    }
+                    else
+                    {
+                        inactiveCount++;
+                    }
                 }
-                ImGui.PushID($"gene{gene.id}");
-                ImGui.Text($"{gene.name}");
-                ImGui.PopID();
+                float all = activeCount + inactiveCount;
+                DebugConsole.Info((0.6f * (inactiveCount / all) + 0.4f).ToString(), "R");
+                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.6f * (inactiveCount / all) + 0.4f, 0.6f * (activeCount / all) + 0.4f, 0.3f, 1f));
+                ImGui.Text($"{activeCount} out of {all} genes active");
                 ImGui.PopStyleColor();
+                ImGui.TextDisabled("Left Shift for detail.");
             }
+
+            
 
             ImGui.PopID();
         }
@@ -890,7 +929,9 @@ public class Editor
         {
             ImGui.PushID(key);
 
-            ImGui.PushItemWidth(ImGui.GetWindowWidth() - 64);
+            CloseButton(ref showConsole);
+            ImGui.SameLine();
+            ImGui.PushItemWidth(ImGui.GetWindowWidth() - 120);
             ImGui.InputText("##input", ref consoleText, 256);
             ImGui.SameLine();
 
@@ -928,6 +969,7 @@ public class Editor
             // }
 
             // (partially) GEMINI GENERATED CODE BELOW
+            ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0f, 0f, 0f, 1f));
             if (ImGui.BeginChild("messages", new Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
             {
                 unsafe
@@ -964,6 +1006,7 @@ public class Editor
                     ImGui.SetScrollHereY(1.0f);
                 }
             }
+            ImGui.PopStyleColor();
             // GEMINI GENERATED CODE ABOVE
             ImGui.EndChild();
 
@@ -977,7 +1020,89 @@ public class Editor
 
     public void ShowSettings()
     {
+        var key = "settings";
+
+        var getName = (int i) => { string[] l = ["Mint & Lemon Peel", "Royalty 1", "Royalty 2", "Custom Dark", "Custom Light", "ImGui Classic", "ImGui Dark", "ImGui Light"]; return l[i]; }; 
+        var range = Enumerable.Range(0, Themes.AllThemes.Count).ToList();
+
+        if(ImGui.Begin("Settings", ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.PushID(key);
+
+            CloseButton(ref showSettings);
+            ImGui.SameLine();
+            if(ImGui.Button("Reset Settings"))
+            {
+                ConfigHandler.ResetConfig();
+            }
+            ImGui.SameLine();
+            if(ImGui.Button("Save Settings"))
+            {
+                ConfigHandler.SaveConfig(); 
+                Themes.AllThemes[ConfigHandler.Config.themeIndex].Invoke();
+
+            }
+            ImGui.Separator();
+
+            ConfigHandler.Config.themeIndex = Selector($"themeSelector{key}", "Theme", range, getName, ConfigHandler.Config.themeIndex);
+
+            if(ConfigHandler.Config.themeIndex == Themes.AllThemes.IndexOf(Themes.ApplyCustomDarkTheme))
+            {
+                ImGui.ColorEdit4("Main", ref ConfigHandler.Config.customDarkThemeMain);
+                ImGui.ColorEdit4("Accent", ref ConfigHandler.Config.customDarkThemeAccent);
+            } else if(ConfigHandler.Config.themeIndex == Themes.AllThemes.IndexOf(Themes.ApplyCustomLightTheme))
+            {
+                ImGui.ColorEdit4("Main", ref ConfigHandler.Config.customLightThemeMain);
+                ImGui.ColorEdit4("Accent", ref ConfigHandler.Config.customLightThemeAccent);
+            }
+
+            ImGui.Separator();
+
+            if(ImGui.Checkbox("Use Multithreading", ref ConfigHandler.Config.useParallel))
+            {
+                renderer.SetParallel();
+            }
+            
+            HoverTooltip("Use multiple threads for computation.\nDisable if you encounter stutters often.");
+
+            // ImGui.Checkbox("Remember Window Positions", ref ConfigHandler.Config.rememberWindows);
+            ImGui.Separator();
+
+            ImGui.Text("Simulations Path");
+            WidthX(300, () => ImGui.InputText("##simulationsPath", ref ConfigHandler.Config.simulationsPath, 128));
+            ImGui.SameLine();
+            if (ImGui.Button($"{FontAwesome6.Folder}##sim"))
+            {
+                Process.Start(new ProcessStartInfo(fileName: ConfigHandler.Config.simulationsPath) {UseShellExecute = true, Verb = "open"});
+            }
+            HoverTooltip("Open folder");
+
+            ImGui.PopID();
+        }
         
+        ImGui.End();
+        
+        // ImGui.ShowStyleEditor();
+    }
+
+    public void ShowWelcome()
+    {
+        var key = "welcome";
+
+        if(ImGui.Begin("Welcome", ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.PushID(key);
+
+            CloseButton(ref showWelcome);
+            ImGui.Separator();
+            ImGui.Text("Cellular Swarm by Ahmet Emir");
+            ImGui.SameLine();
+            ImGui.TextLinkOpenURL("@aeuludag", "https://aeuludag.github.io");
+            ImGui.Separator();
+
+            ImGui.PopID();
+        }
+        ImGui.End();
     }
 
     // GENERICS
@@ -1271,11 +1396,12 @@ public class Editor
         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0f, 0f, 1f));
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.5f, 0f, 0f, 1f));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.5f, 0f, 0f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Text, Vector4.One);
         if (ImGui.Button($"Close"))
         {
             toFalse = false;
         }
-        ImGui.PopStyleColor(3);
+        ImGui.PopStyleColor(4);
     }
 
     void RedButton(Action content)
@@ -1283,8 +1409,9 @@ public class Editor
         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0f, 0f, 1f));
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.5f, 0f, 0f, 1f));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.5f, 0f, 0f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Text, Vector4.One);
         content();
-        ImGui.PopStyleColor(3);
+        ImGui.PopStyleColor(4);
     }
 
     void WidthX(float x, Action content)

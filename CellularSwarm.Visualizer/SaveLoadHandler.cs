@@ -16,11 +16,24 @@ public class SaveLoadHandler
         // folder = Directory.GetParent(folder)!.FullName;
         // folder = Directory.GetParent(folder)!.FullName;
         // folder = Path.Combine(folder, "Simulations");
-        folder = "/Users/aeuludag/Documents/Simulations";
+        DebugConsole.Info("Initializing save & load locations.", "IO");
+        var location = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        location = Path.Combine(location, "Simulations");
+        DebugConsole.Info($"Generated path: [{location}]", "IO");
+        if (Path.Exists(location))
+        {
+            DebugConsole.Info("Path exists.", "IO");
+        }
+        else
+        {
+            DebugConsole.Warning("Path does not exist. Trying to create one.", "IO");
+            Directory.CreateDirectory(location);
+        }
+        folder = location;
     }
     public void SaveSimulation(Simulation simulation, SimulationRenderer simulationRenderer, string name = "")
     {
-        DebugConsole.Info($"Exporting simulation [{name}] to path: [{folder}]", "SIMULATION");
+        DebugConsole.Info($"Exporting simulation [{name}] to path: [{folder}].", "IO");
 
         var serializedSimulation = Serializer.Serialize(simulation);
         var serializedSimulationRenderer = VisualizationData.Serialize(simulationRenderer);
@@ -34,7 +47,7 @@ public class SaveLoadHandler
     }
     public SimulationRenderer LoadSimulation(string name)
     {
-        DebugConsole.Info($"Loading simulation [{name}] from path: [{folder}]", "SIMULATION");
+        DebugConsole.Info($"Loading simulation [{name}] from path: [{folder}]", "IO");
         try
         {
             var simulation = Serializer.Deserialize(File.ReadAllText(Path.Combine(folder, $"{name}.json")));
@@ -52,9 +65,9 @@ public class SaveLoadHandler
         }
         catch (Exception e)
         {
-            DebugConsole.Error($"Error while loading simulation [{name}]. Raw exception message below.", "SIMULATION");
-            DebugConsole.Error(e.Message, "SIMULATION");
-            DebugConsole.Warning("Loading a default simulation.", "SIMULATION");
+            DebugConsole.Error($"Error while loading simulation [{name}].", "IO");
+            DebugConsole.Error(e.Message, "IO");
+            DebugConsole.Warning("Loading a default simulation.", "IO");
             var simulation = new Simulation(0, "default-error");
             badLoad = true;
             return new SimulationRenderer(simulation);

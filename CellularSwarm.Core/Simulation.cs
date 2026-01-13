@@ -6,7 +6,7 @@ namespace CellularSwarm.Core;
 
 public class Simulation
 {
-    public const string VERSION = "0.1.251221";
+    public const string VERSION = "0.1.260113";
     public int id;
     public string name;
 
@@ -131,19 +131,20 @@ public class Simulation
             Cells.Add(freeTiles[i], newCell);
         }
 
+        for (int i = 0; i < diffusionSteps; i++)
+        {
+            Diffuser.Diffuse();
+        }
+
         foreach (var coords in cellsToApoptosis)
         {
             var cell = Cells[coords];
 
             cell.Apoptosis();
-            Diffuser.DiffuseAllOf(coords);
             Cells.Remove(coords);
         }
 
-        for (int i = 0; i < diffusionSteps; i++)
-        {
-            Diffuser.Diffuse();
-        }
+        Diffuser.ActiveTransportationCollection(Cells.Keys.ToList());
 
         return Cells;
     }

@@ -1,11 +1,12 @@
 using System;
 using System.Numerics;
 using CellularSwarm.Core;
+using CellularSwarm.Visualizer;
 using Raylib_cs;
 
 public class SimulationRenderer
 {
-    public const string VERSION = "0.1.260111";
+    public const string VERSION = "0.1.260113";
     public const string RENDERER = "Default Limon Renderer";
     public Simulation Simulation { get => _simulation; set => _simulation = value; }
     public VisualizationType visualizationType = VisualizationType.ThreeMorphogens;
@@ -23,12 +24,17 @@ public class SimulationRenderer
     public Cell EmptyCell { get => cellPalette[0].cell; }
 
     Simulation _simulation;
+    private bool _useParallel = true;
+    private Func<Dictionary<HexCoords, Cell>> _stepFunction;
 
     public SimulationRenderer()
     {
         _simulation = new(0, "new");
         cellPalette = [(new Cell(_simulation), "Empty Cell")];
         cellIndex = 0;
+        _stepFunction = _simulation.StepParallel;
+        // _useParallel = ConfigHandler.Config.useParallel;
+        // _stepFunction = _useParallel ? Simulation.StepParallel : Simulation.Step;
     }
 
     public SimulationRenderer(Simulation simulation)
@@ -36,6 +42,19 @@ public class SimulationRenderer
         _simulation = simulation;
         cellPalette = [(new Cell(_simulation), "Empty Cell")];
         cellIndex = 0;
+        _stepFunction = _simulation.StepParallel;
+        // _useParallel = ConfigHandler.Config.useParallel;
+        // _stepFunction = _useParallel ? Simulation.StepParallel : Simulation.Step;
+    }
+
+    public void SetParallel()
+    {
+        _useParallel = ConfigHandler.Config.useParallel;
+        _stepFunction = _useParallel ? _simulation.StepParallel : _simulation.Step;
+    }
+    public void Step()
+    {
+        _stepFunction.Invoke();
     }
 
     public void ChangeSimulation(Simulation simulation)
