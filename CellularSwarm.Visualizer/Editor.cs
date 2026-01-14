@@ -5,6 +5,7 @@ using CellularSwarm.Core;
 using ImGuiNET;
 using IconFonts;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace CellularSwarm.Visualizer;
 
@@ -26,13 +27,13 @@ public class Editor
     public bool showGridEditor = true;
     public bool showVisualizationEditor = false;
     public bool showConsole = false;
-    public bool showSettings = true;
-    public bool showWelcome = false;
+    public bool showSettings = false;
+    public bool showWelcome = true;
 
     public HexCoords selectedCellCoords = new(int.MaxValue, int.MaxValue);
 
-    private readonly static Random random = new();
-    Dictionary<string, int> selectorStates = new(); // help by gpt
+    public static readonly List<Texture2D> LoadedTextures = new();
+
     public static readonly Vector4 RED_WARNING = new(0.9f, 0f, 0f, 1f);
     public static readonly Vector4 RED_LIGHT = new(1f, 0.7f, 0.7f, 1f);
     public static readonly Vector4 RED_DARK = new(0.7f, 0.2f, 0.2f, 1f);
@@ -42,12 +43,21 @@ public class Editor
     public static readonly Vector4 BLUE_DARK = new(0.3f, 0f, 0f, 1f);
     public static readonly Vector4 PURPLE_DARK = new(0.5f, 0.4f, 0.7f, 1f);
 
+    private readonly static Random random = new();
+
+    private Dictionary<string, int> selectorStates = new(); // help by gpt
+
     private string consoleText = "";
+    private Texture2D icon;
+    private Texture2D iconNoBg;
 
     public Editor(SimulationRenderer renderer)
     {
         this.renderer = renderer;
         DebugConsole.Instance.Renderer = renderer;
+
+        icon = LoadTexture("icon.png");
+        iconNoBg = LoadTexture("icon_nobg.png");
     }
 
     public void ShowWindowManager(HexCoords mouseHex)
@@ -117,9 +127,9 @@ public class Editor
         if                (showInspector)   { ShowInspectWindow(mouseHex); }
         if               (showCellEditor)   { ShowCellEditor(selectedCellCoords); }
         if               (showGridEditor)   { WinPos(w - 16, h - 16, 1, 1); ShowGridEditor(); }
-        if                  (showConsole)   { WinPos(w/2, h/2, 0.5f, 0.5f); ImGui.SetNextWindowSize(new Vector2(550, 600), ImGuiCond.Once); ShowConsole(); }
+        if                  (showConsole)   { WinPos(w/2, h/2, 0.5f, 0.5f); ImGui.SetNextWindowSize(new Vector2(720, 600), ImGuiCond.Once); ShowConsole(); }
         if                 (showSettings)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowSettings(); }
-        if                 (showWelcome)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowWelcome(); }
+        if                  (showWelcome)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowWelcome(); }
         // tehehe
 
         ImGui.PopStyleVar();
@@ -489,7 +499,7 @@ public class Editor
 
                     ImGui.TableSetColumnIndex(2);
                     ImGui.PushItemWidth(100);
-                    ImGui.SliderInt("##Neighbour Count", ref threshold, 0, 6);
+                    if(ImGui.SliderInt("##Neighbour Count", ref threshold, 0, 6)) { threshold = Math.Clamp(threshold, 0, 6); };
                     ImGui.PopItemWidth();
                 }
                 ImGui.EndTable();
@@ -833,7 +843,7 @@ public class Editor
 
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize("Brush Size").X - 10);
             brushSize++;
-            ImGui.SliderInt("Brush Size", ref brushSize, 1, 12);
+            if(ImGui.SliderInt("Brush Size", ref brushSize, 1, 12)) { brushSize = Math.Clamp(brushSize, 1, 12); }
             brushSize--;
 
 
@@ -873,17 +883,17 @@ public class Editor
                     morphogenKeys.Remove(renderer.greenMorphogenId);
                     morphogenKeys.Remove(renderer.blueMorphogenId);
 
-                    ImGui.PushStyleColor(ImGuiCol.Text, RED_LIGHT);
+                    // ImGui.PushStyleColor(ImGuiCol.Text, RED_LIGHT);
                     renderer.redMorphogenId = SoftSelector("redMorphogen", "Red", morphogenKeys, (id) => morphogens[id].name, renderer.redMorphogenId);
-                    ImGui.PopStyleColor();
+                    // ImGui.PopStyleColor();
 
-                    ImGui.PushStyleColor(ImGuiCol.Text, GREEN_LIGHT);
+                    // ImGui.PushStyleColor(ImGuiCol.Text, GREEN_LIGHT);
                     renderer.greenMorphogenId = SoftSelector("greenMorphogen", "Green", morphogenKeys, (id) => morphogens[id].name, renderer.greenMorphogenId);
-                    ImGui.PopStyleColor();
+                    // ImGui.PopStyleColor();
 
-                    ImGui.PushStyleColor(ImGuiCol.Text, BLUE_LIGHT);
+                    // ImGui.PushStyleColor(ImGuiCol.Text, BLUE_LIGHT);
                     renderer.blueMorphogenId = SoftSelector("blueMorphogen", "Blue", morphogenKeys, (id) => morphogens[id].name, renderer.blueMorphogenId);
-                    ImGui.PopStyleColor();
+                    // ImGui.PopStyleColor();
 
                     break;
                 case 1: // Single Morphogen
@@ -1022,7 +1032,7 @@ public class Editor
     {
         var key = "settings";
 
-        var getName = (int i) => { string[] l = ["Mint & Lemon Peel", "Royalty 1", "Royalty 2", "Custom Dark", "Custom Light", "ImGui Classic", "ImGui Dark", "ImGui Light"]; return l[i]; }; 
+        var getName = (int i) => { string[] l = ["Mint & Lemon Peel", "Wario", "Mario", "ImGui Classic", "ImGui Dark", "ImGui Light", "Custom Dark", "Custom Light"]; return l[i]; }; 
         var range = Enumerable.Range(0, Themes.AllThemes.Count).ToList();
 
         if(ImGui.Begin("Settings", ImGuiWindowFlags.AlwaysAutoResize))
@@ -1089,20 +1099,83 @@ public class Editor
     {
         var key = "welcome";
 
+        var width = 2 * ImGui.CalcTextSize("Welcome to Cellular Swarm!").X + 8 + 96;
+
         if(ImGui.Begin("Welcome", ImGuiWindowFlags.AlwaysAutoResize))
         {
             ImGui.PushID(key);
+            ImGui.PushTextWrapPos(width);
 
             CloseButton(ref showWelcome);
-            ImGui.Separator();
-            ImGui.Text("Cellular Swarm by Ahmet Emir");
+
+            ImGui.Separator(); // -----------
+
+            ImGui.Image((IntPtr)iconNoBg.Id, new Vector2(96, 96));
             ImGui.SameLine();
-            ImGui.TextLinkOpenURL("@aeuludag", "https://aeuludag.github.io");
+            ImGui.PushStyleColor(ImGuiCol.ChildBg, Vector4.Zero);
+            ImGui.BeginChild("##title", new Vector2(width - 100, 96));
+            ImGui.SetWindowFontScale(2);
+            ImGui.Dummy(new Vector2(0, 16));
+            ImGui.Text($"Welcome to Cellular Swarm!");
+            ImGui.SetWindowFontScale(1);
+            ImGui.Text($"v{SimulationRenderer.VERSION} - Last Updated 18th Jan 2026");
+            ImGui.EndChild();
+            ImGui.PopStyleColor();
+
             ImGui.Separator();
 
+            ImGui.Text(" Cellular Swarm is a life simulator that lets you create your own life forms using custom genes & molecules you define.");
+            ImGui.Text(" Start playing around with the sample simulations! Type \"sample1\" to the save & load window on your top right and click import.");
+            
+            ImGui.Separator(); // -----------
+
+            ImGui.Text("See the");
+            ImGui.SameLine();
+            ImGui.TextLinkOpenURL("Itch.io page", "https://aeuludag.itch.io/cellular-swarm/");
+            ImGui.SameLine();
+            ImGui.Text("and devlogs below for a quick introduction.");
+
+            ImGui.SeparatorText("Devlogs");
+            ImGui.TextLinkOpenURL("Devlog 0 - Release", "https://aeuludag.itch.io/cellular-swarm/devlog/1315596/release");
+            ImGui.SameLine();
+            ImGui.Text("- 18.01.2026");
+            
+            ImGui.Separator(); // -----------
+
+            ImGui.Text("Hope you enjoy! Feel free to contact if you have any feedback.");
+            ImGui.TextLinkOpenURL("@aeuludag", "https://aeuludag.github.io");
+
+            ImGui.SameLine();
+            ImGui.TextLinkOpenURL("Source Code", "https://github.com/aeuludag/CellularSwarm");
+
+            ImGui.TextDisabled("Made with Raylib, ImGui and love <3.");
+
+            ImGui.PopTextWrapPos();
             ImGui.PopID();
         }
         ImGui.End();
+    }
+
+    public static Image LoadImage(string fileName)
+    // help by gpt!
+    {
+        DebugConsole.Info($"Loading image [{fileName}].", "EDITOR");
+        byte[] imageBytes;
+        using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"CellularSwarm.Visualizer.{fileName}"))
+        {
+            imageBytes = new byte[stream!.Length];
+            stream.ReadExactly(imageBytes, 0, imageBytes.Length);
+        }
+        Image img = Raylib.LoadImageFromMemory(".png", imageBytes);
+        return img;
+    }
+    public static Texture2D LoadTexture(string fileName)
+    {
+        Image img = LoadImage(fileName);
+        Texture2D myTexture = Raylib.LoadTextureFromImage(img);
+        Raylib.UnloadImage(img);
+        LoadedTextures.Add(myTexture);
+        return myTexture;
     }
 
     // GENERICS

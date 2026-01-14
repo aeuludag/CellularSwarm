@@ -17,7 +17,7 @@ public class DebugConsole
     private List<Message> lines = new();
 
     private Dictionary<string, Command> commands;
-    private char prefix = '>';
+    private char prefix = '!';
 
     public DebugConsole()
     {

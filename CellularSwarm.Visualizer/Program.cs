@@ -3,20 +3,17 @@ using rlImGui_cs;
 using ImGuiNET;
 using System.Numerics;
 using IconFonts;
+using System.Runtime.InteropServices;
 
 using CellularSwarm.Core;
 using CellularSwarm.Visualizer;
 using static CellularSwarm.Visualizer.Editor;
-using System.Runtime.InteropServices;
-using System.Diagnostics;
-using Newtonsoft.Json;
+using System.Reflection;
 
 ConfigHandler.LoadConfig();
 
 int width = ConfigHandler.Config.width;
 int height = ConfigHandler.Config.height;
-
-bool isFullScreen = false;
 
 float scale = 1f;
 
@@ -24,7 +21,7 @@ float hexSize = 50f;
 
 Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
 Raylib.InitWindow(width, height, "Cellular Swarm");
-Raylib.SetWindowPosition(16, 16);
+Raylib.SetWindowPosition(0, 0);
 Raylib.SetWindowMinSize(400, 400);
 Raylib.SetTargetFPS(60);
 Raylib.SetExitKey(KeyboardKey.Null);
@@ -98,6 +95,8 @@ DebugConsole.Log(new Vector4(0.9f, 0.6f, 0.2f, 1f), $"Simulation version: v{Simu
 DebugConsole.Log(new Vector4(0.6f, 0.8f, 0.2f, 1f), $"Simulation Renderer version: v{SimulationRenderer.VERSION}", "aeuludag");
 DebugConsole.Log(new Vector4(0.4f, 0.8f, 0.5f, 1f), $"OS Architecture: {RuntimeInformation.OSArchitecture}", "aeuludag");
 DebugConsole.Log(new Vector4(0.2f, 0.6f, 0.9f, 1f), $"OS Version: {Environment.OSVersion}", "aeuludag");
+
+DebugConsole.Log(new Vector4(0.0f, 0.9f, 0.9f, 1f), $"Type !help to see available commands.", "aeuludag");
 
 // List<int> UIDrawTimes = new();
 // List<int> simulationStepTimes = new();
@@ -178,7 +177,7 @@ while (!Raylib.WindowShouldClose())
 
     DrawUI();
 
-    Raylib.DrawText($"Cellular Swarm - v{Simulation.VERSION} - {RuntimeInformation.OSArchitecture} - {Environment.OSVersion} - {DateTime.Today:d} - {Raylib.GetFPS()} FPS", 5, 5, 15, Color.White);
+    Raylib.DrawText($"Cellular Swarm - v{SimulationRenderer.VERSION} - {RuntimeInformation.OSArchitecture} - {Environment.OSVersion} - {DateTime.Today:d} - {Raylib.GetFPS()} FPS", 5, 5, 15, Color.White);
     // Raylib.DrawText($"FPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 25, 15, Color.RayWhite);
 
     Raylib.EndDrawing();
@@ -188,6 +187,11 @@ ConfigHandler.Config.width = Raylib.GetScreenWidth();
 ConfigHandler.Config.height = Raylib.GetScreenHeight();
 
 ConfigHandler.SaveConfig();
+
+foreach (var txt2d in Editor.LoadedTextures)
+{
+    Raylib.UnloadTexture(txt2d);
+}
 
 rlImGui.Shutdown();
 Raylib.CloseWindow();
@@ -201,12 +205,15 @@ void DrawUI()
 {
     rlImGui.Begin();
 
+    ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(8, 8));
     Editor.WinPos(width - 16, 16, 1, 0);
     Controls();
 
-    Editor.WinPos(width - 16, 96, 1, 0);
+    Editor.WinPos(width - 16, 112, 1, 0);
     SaveLoadWindow();
+    ImGui.PopStyleVar();
     editor.ShowWindowManager(mouseHex);
+
     // ImGui.ShowDemoWindow();
 
     rlImGui.End();
@@ -221,7 +228,7 @@ void HandleKeyboardInput()
     ControlSimulationWithKeyboard();
     SetGridModeWithKeyboard();
 
-    if (Raylib.IsKeyPressed(KeyboardKey.F)) ToggleFullscreen();
+    // if (Raylib.IsKeyPressed(KeyboardKey.F)) ToggleFullscreen();
     // if (Raylib.IsKeyPressed(KeyboardKey.P)) useParallel ^= true; // feelin' fancy y'know :smirk:
     // if (Raylib.IsKeyPressed(KeyboardKey.T)) diagnosticStep ^= true;
     // if (Raylib.IsKeyPressed(KeyboardKey.G)) { simulationStepTimes.Clear(); cellStepTimes.Clear(); multiplicationTimes.Clear(); diffusionTimes.Clear(); apoptosisTimes.Clear(); }
@@ -248,33 +255,6 @@ void HandleMouseInput()
 //         Console.WriteLine($"Scrolled: {wheel}");
 //     }
 // }
-
-void ToggleFullscreen()
-// by gpt
-{
-    if (!isFullScreen)
-    {
-        // Save window size before switching
-        width = Raylib.GetScreenWidth();
-        height = Raylib.GetScreenHeight();
-
-        windowPos = Raylib.GetWindowPosition();
-
-        int mon = Raylib.GetCurrentMonitor();
-        int monW = Raylib.GetMonitorWidth(mon);
-        int monH = Raylib.GetMonitorHeight(mon);
-
-        Raylib.SetWindowPosition(0, 0);
-        Raylib.SetWindowSize(monW, monH);
-        isFullScreen = true;
-    }
-    else
-    {
-        Raylib.SetWindowPosition((int)windowPos.X, (int)windowPos.Y);
-        Raylib.SetWindowSize(width, height); // restore windowed size
-        isFullScreen = false;
-    }
-}
 
 void SetZoomWithMouse()
 {
@@ -465,7 +445,9 @@ void SaveLoadWindow()
 {
     if (ImGui.Begin("Save & Load", ImGuiWindowFlags.AlwaysAutoResize))
     {
-        ImGui.SetWindowFontScale(scale);
+        ImGui.InputText(".csim", ref saveLoadPath, 64);
+        ImGui.Separator();
+        
         if (ImGui.Button(FontAwesome6.Upload + " Export"))
         {
             saveLoadHandler.SaveSimulation(GetSimulation(), simulationRenderer, saveLoadPath);
@@ -484,8 +466,6 @@ void SaveLoadWindow()
             ImGui.Text($"No such file.");
             ImGui.PopStyleColor();
         }
-        ImGui.Separator();
-        ImGui.InputText(".json", ref saveLoadPath, 64);
     }
     ImGui.End();
 }

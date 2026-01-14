@@ -12,6 +12,8 @@
     <PackageReference Include="Raylib-cs" Version="7.0.1" />
     <PackageReference Include="rlImgui-cs" Version="3.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
+    <EmbeddedResource Include="icon.png" />
+    <EmbeddedResource Include="icon_nobg.png" />
   </ItemGroup>
 
   <ItemGroup>

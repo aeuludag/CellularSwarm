@@ -54,7 +54,6 @@ public class ConfigHandler
         try
         {
             var text = File.ReadAllText(Path.Combine(Instance.location, "config.json"));
-            DebugConsole.Info(text, "CONFIG");
             Config deserialized = JsonConvert.DeserializeObject<Config>(text) ?? new Config();
             Instance.config = deserialized;
             if(deserialized.simulationsPath == string.Empty) { deserialized.simulationsPath = new Config().simulationsPath; }
