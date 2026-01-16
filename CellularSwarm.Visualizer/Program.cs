@@ -8,7 +8,6 @@ using System.Runtime.InteropServices;
 using CellularSwarm.Core;
 using CellularSwarm.Visualizer;
 using static CellularSwarm.Visualizer.Editor;
-using System.Reflection;
 
 ConfigHandler.LoadConfig();
 
@@ -59,6 +58,7 @@ SaveLoadHandler saveLoadHandler = new();
 string saveLoadPath = "default";
 
 var backColor = new Color(40, 40, 40);
+var outlineColor = new Color(80, 80, 80);
 
 SimulationRenderer simulationRenderer = new();
 Simulation GetSimulation() { return simulationRenderer.Simulation; }
@@ -86,8 +86,8 @@ unsafe
     // }
 }
 
-Themes.ApplyMorph();
-Themes.AllThemes[ConfigHandler.Config.themeIndex].Invoke();
+ThemeHandler.ApplyMorph();
+ThemeHandler.ApplyTheme(ThemeHandler.Themes[ConfigHandler.Config.themeIndex]);
 ResetSimulation();
 
 DebugConsole.Log(new Vector4(1.0f, 0.2f, 0.2f, 1f), "Cellular Swarm", "aeuludag");
@@ -124,6 +124,9 @@ while (!Raylib.WindowShouldClose())
     if (play) Step();
 
     // --- Draw ---
+    backColor = ConfigHandler.Config.backColor;
+    outlineColor = ConfigHandler.Config.outlineColor;
+
     Raylib.BeginDrawing();
     Raylib.ClearBackground(backColor);
     Raylib.BeginMode2D(camera);
@@ -135,7 +138,7 @@ while (!Raylib.WindowShouldClose())
     var bottomLeft = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(0, Raylib.GetScreenHeight()), camera));
     var topRight = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), 0), camera));
 
-    if (camera.Zoom >= 0.2f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, Color.DarkGray);
+    if (camera.Zoom >= 0.2f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, outlineColor);
 
     switch (simulationRenderer.visualizationType)
     {
@@ -321,7 +324,7 @@ void ControlSimulationWithKeyboard()
         DebugConsole.Info(play ? "Resuming simulation." : "Pausing simulation.", "RENDERER");
     }
     if (Raylib.IsKeyPressed(KeyboardKey.C)) { DebugConsole.Info("Clearing grid.", "RENDERER"); simulationRenderer.ClearGrid(); }
-    if (Raylib.IsKeyPressed(KeyboardKey.R)) { ResetSimulation(); }
+    // if (Raylib.IsKeyPressed(KeyboardKey.R)) { ResetSimulation(); }
 }
 
 // void LogLastDiagnosticData()

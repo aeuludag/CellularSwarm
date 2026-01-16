@@ -28,7 +28,7 @@ public class Editor
     public bool showVisualizationEditor = false;
     public bool showConsole = false;
     public bool showSettings = false;
-    public bool showWelcome = true;
+    public bool showWelcome = ConfigHandler.Config.showWelcome;
 
     public HexCoords selectedCellCoords = new(int.MaxValue, int.MaxValue);
 
@@ -459,7 +459,9 @@ public class Editor
                 $"Is {simulation.Morphogens[morphogenId].name} concentration{(not ? " not " : " ")}{(comparisonType == GeneCondition.ComparisonType.GreaterThan ? "greater than" : "less than")} {thresholdConcentration:F2}?"
                 )}";
 
-                ImGui.TextWrapped(inEnglish);
+                ImGui.PushTextWrapPos(450);
+                ImGui.Text(inEnglish);
+                ImGui.PopTextWrapPos();
 
             }
             else if (geneCondition is CellTypeCondition cellTypeCondition)
@@ -475,7 +477,9 @@ public class Editor
                 cellTypeCondition.not = not;
                 cellTypeCondition.cellType = cellType;
 
-                ImGui.TextWrapped($"Is cell type{(not ? " not " : " ")}{cellType.name}?");
+                ImGui.PushTextWrapPos(200);
+                ImGui.Text($"Is cell type{(not ? " not " : " ")}{cellType.name}?");
+                ImGui.PopTextWrapPos();
             }
             else if (geneCondition is NeighbourCondition neighbourCondition)
             {
@@ -513,7 +517,10 @@ public class Editor
                 $"Does neighbour count{(not ? " not " : " ")}equal to {threshold}?" :
                 $"Is neighbour count{(not ? " not " : " ")}{(comparisonType == GeneCondition.ComparisonType.GreaterThan ? "greater than" : "less than")} {threshold}?"
                 )}";
-                ImGui.TextWrapped(inEnglish);
+
+                ImGui.PushTextWrapPos(400);
+                ImGui.Text(inEnglish);
+                ImGui.PopTextWrapPos();
             }
 
             List<string> referencedInGenes = new();
@@ -718,14 +725,11 @@ public class Editor
                     }
                 }
                 float all = activeCount + inactiveCount;
-                DebugConsole.Info((0.6f * (inactiveCount / all) + 0.4f).ToString(), "R");
                 ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.6f * (inactiveCount / all) + 0.4f, 0.6f * (activeCount / all) + 0.4f, 0.3f, 1f));
                 ImGui.Text($"{activeCount} out of {all} genes active");
                 ImGui.PopStyleColor();
                 ImGui.TextDisabled("Left Shift for detail.");
             }
-
-            
 
             ImGui.PopID();
         }
@@ -748,9 +752,8 @@ public class Editor
         {
             ImGui.PushID(key);
 
-            // CloseButton(ref showCellEditor);
-            // ImGui.Separator();
-
+            RedButton(() => { if(ImGui.Button("Close")) selectedCellCoords = new(int.MaxValue, int.MaxValue); });
+            ImGui.SameLine();
             if (ImGui.Button("Add to Palette"))
             {
                 renderer.cellPalette.Add((new(cell), "New Cell"));
@@ -1032,8 +1035,11 @@ public class Editor
     {
         var key = "settings";
 
-        var getName = (int i) => { string[] l = ["Mint & Lemon Peel", "Wario", "Mario", "ImGui Classic", "ImGui Dark", "ImGui Light", "Custom Dark", "Custom Light"]; return l[i]; }; 
-        var range = Enumerable.Range(0, Themes.AllThemes.Count).ToList();
+        var getName = (int i) => ThemeHandler.Themes[i].name; 
+        var range = Enumerable.Range(0, ThemeHandler.Themes.Count).ToList();
+
+        var v2c = (Vector4 v) => new Color(v.X, v.Y, v.Z, v.W);
+        var c2v = (Color c) => new Vector4(c.R / 255f, c.G / 255f, c.B / 255f, c.A / 255f);
 
         if(ImGui.Begin("Settings", ImGuiWindowFlags.AlwaysAutoResize))
         {
@@ -1044,41 +1050,71 @@ public class Editor
             if(ImGui.Button("Reset Settings"))
             {
                 ConfigHandler.ResetConfig();
+                ConfigHandler.SaveConfig();
+                ThemeHandler.ApplyCurrentTheme();
             }
-            ImGui.SameLine();
-            if(ImGui.Button("Save Settings"))
-            {
-                ConfigHandler.SaveConfig(); 
-                Themes.AllThemes[ConfigHandler.Config.themeIndex].Invoke();
-
-            }
-            ImGui.Separator();
-
-            ConfigHandler.Config.themeIndex = Selector($"themeSelector{key}", "Theme", range, getName, ConfigHandler.Config.themeIndex);
-
-            if(ConfigHandler.Config.themeIndex == Themes.AllThemes.IndexOf(Themes.ApplyCustomDarkTheme))
-            {
-                ImGui.ColorEdit4("Main", ref ConfigHandler.Config.customDarkThemeMain);
-                ImGui.ColorEdit4("Accent", ref ConfigHandler.Config.customDarkThemeAccent);
-            } else if(ConfigHandler.Config.themeIndex == Themes.AllThemes.IndexOf(Themes.ApplyCustomLightTheme))
-            {
-                ImGui.ColorEdit4("Main", ref ConfigHandler.Config.customLightThemeMain);
-                ImGui.ColorEdit4("Accent", ref ConfigHandler.Config.customLightThemeAccent);
-            }
+            // ImGui.SameLine();
+            // if(ImGui.Button("Save Settings"))
+            // {
+            //     ConfigHandler.SaveConfig(); 
+            //     ThemeHandler.ApplyCurrentTheme();
+            // }
 
             ImGui.Separator();
+            ImGui.SeparatorText("UI");
+
+            int currentThemeIndex = Selector($"themeSelector{key}", "Theme", range, getName, ConfigHandler.Config.themeIndex);
+            if(ConfigHandler.Config.themeIndex != currentThemeIndex)
+            {
+                ConfigHandler.Config.themeIndex = currentThemeIndex;
+                ThemeHandler.ApplyCurrentTheme();
+            }
+
+            if(ThemeHandler.Themes[ConfigHandler.Config.themeIndex].name == "Custom Dark")
+            {
+                if(ImGui.ColorEdit4("Main", ref ConfigHandler.Config.customDarkTheme.main)) ThemeHandler.ApplyCurrentTheme();
+                if(ImGui.ColorEdit4("Accent", ref ConfigHandler.Config.customDarkTheme.accent)) ThemeHandler.ApplyCurrentTheme();
+                
+            } else if(ThemeHandler.Themes[ConfigHandler.Config.themeIndex].name == "Custom Light")
+            {
+                if(ImGui.ColorEdit4("Main", ref ConfigHandler.Config.customLightTheme.main)) ThemeHandler.ApplyCurrentTheme();
+                if(ImGui.ColorEdit4("Accent", ref ConfigHandler.Config.customLightTheme.accent)) ThemeHandler.ApplyCurrentTheme();
+
+            } else
+            {
+                var currentTheme = ThemeHandler.Themes[currentThemeIndex];
+                var main = currentTheme.main;
+                var accent = currentTheme.accent;
+                ImGui.BeginDisabled();
+                ImGui.ColorEdit4("Main", ref main);
+                ImGui.ColorEdit4("Accent", ref accent);
+                ImGui.EndDisabled();
+            }
+
+            ImGui.SeparatorText("Background");
+
+            var bc2v = c2v(ConfigHandler.Config.backColor);
+            var oc2v = c2v(ConfigHandler.Config.outlineColor);
+
+            ImGui.ColorEdit4("Back Color", ref bc2v);
+            ImGui.ColorEdit4("Outline Color", ref oc2v);
+            bc2v.W = 1f;
+
+            ConfigHandler.Config.backColor = v2c(bc2v);
+            ConfigHandler.Config.outlineColor = v2c(oc2v);
+
+            ImGui.SeparatorText("Other");
 
             if(ImGui.Checkbox("Use Multithreading", ref ConfigHandler.Config.useParallel))
             {
                 renderer.SetParallel();
             }
-            
             HoverTooltip("Use multiple threads for computation.\nDisable if you encounter stutters often.");
 
-            // ImGui.Checkbox("Remember Window Positions", ref ConfigHandler.Config.rememberWindows);
-            ImGui.Separator();
+            ImGui.Checkbox("Show Welcome Screen", ref ConfigHandler.Config.showWelcome);
 
-            ImGui.Text("Simulations Path");
+            ImGui.SeparatorText("Simulations Path");
+
             WidthX(300, () => ImGui.InputText("##simulationsPath", ref ConfigHandler.Config.simulationsPath, 128));
             ImGui.SameLine();
             if (ImGui.Button($"{FontAwesome6.Folder}##sim"))
@@ -1107,6 +1143,10 @@ public class Editor
             ImGui.PushTextWrapPos(width);
 
             CloseButton(ref showWelcome);
+            ImGui.SameLine();
+            var dontShowAgain = !ConfigHandler.Config.showWelcome;
+            ImGui.Checkbox("Don't Show Again", ref dontShowAgain);
+            ConfigHandler.Config.showWelcome = !dontShowAgain;
 
             ImGui.Separator(); // -----------
 
@@ -1331,7 +1371,7 @@ public class Editor
                 ImGui.Text($"{getName(item)}");
 
                 ImGui.TableSetColumnIndex(1);
-                if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Remove")) list.Remove(item);
+                RedButton(() => {if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Remove")) list.Remove(item); });
 
                 ImGui.PopID();
             }
@@ -1364,36 +1404,40 @@ public class Editor
     void RemoveArea<T>(Dictionary<int, T> dictToRemoveFrom, int id, bool isReferenced, string name)
     {
         var simulation = renderer.Simulation;
-        RedButton(() =>
+        var isGridEmpty = simulation.Cells.Count == 0;
+        var isLast = dictToRemoveFrom.Count == 1;
+        var canDelete = !isReferenced && isGridEmpty && !isLast;
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, Vector4.Zero);
+        if (ImGui.BeginChild("removalArea", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())))
         {
-            var isGridEmpty = simulation.Cells.Count == 0;
-            var isLast = dictToRemoveFrom.Count == 1;
-            var canDelete = !isReferenced && isGridEmpty && !isLast;
-            if (ImGui.BeginChild("removalArea", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetFrameHeight())))
+            if (!canDelete) ImGui.BeginDisabled();
+
+            RedButton(() =>
             {
-                if (!canDelete) ImGui.BeginDisabled();
                 if (ImGui.Button($"Delete {name}"))
                 {
                     dictToRemoveFrom.Remove(id);
                 }
-                if (!canDelete) ImGui.EndDisabled();
-                // if (!canDelete)
-                // {
-                //     ImGui.SameLine();
-                //     ImGui.TextColored(RED_WARNING, "Can't delete this now.");
-                // }
-            }
-            ImGui.EndChild();
-            if (!canDelete && ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.TextColored(RED_WARNING, "Can't delete this now.");
-                if (isReferenced) ImGui.BulletText($"{name} is still used (see Info).");
-                if (!isGridEmpty) ImGui.BulletText($"Grid must be cleared first.");
-                if (isLast) ImGui.BulletText($"At least one {name} should remain.");
-                ImGui.EndTooltip();
-            }
-        });
+            });
+            if (!canDelete) ImGui.EndDisabled();
+            // if (!canDelete)
+            // {
+            //     ImGui.SameLine();
+            //     ImGui.TextColored(RED_WARNING, "Can't delete this now.");
+            // }
+        }
+        ImGui.EndChild();
+        ImGui.PopStyleColor();
+
+        if (!canDelete && ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextColored(RED_WARNING, "Can't delete this now.");
+            if (isReferenced) ImGui.BulletText($"{name} is still used (see Info).");
+            if (!isGridEmpty) ImGui.BulletText($"Grid must be cleared first.");
+            if (isLast) ImGui.BulletText($"At least one {name} should remain.");
+            ImGui.EndTooltip();
+        }
     }
 
     string ActionTypeToString(GeneAction.ActionType actionType)

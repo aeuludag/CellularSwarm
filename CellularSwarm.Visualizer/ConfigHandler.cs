@@ -66,12 +66,11 @@ public class ConfigHandler
             DebugConsole.Warning("Loading default config.", "CONFIG");
             Instance.config = new Config();
         }
-
     }
 
     public static void ResetConfig()
     {
-        Instance.config = new Config();
+        Instance.config.Reset();
         DebugConsole.Info("Config reset.", "CONFIG");
     }
 }

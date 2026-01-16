@@ -3,9 +3,27 @@ using ImGuiNET;
 
 namespace CellularSwarm.Visualizer;
 
-public static class Themes
+public static class ThemeHandler
 {
-    public readonly static List<Action> AllThemes = new List<Action>() { Themes.ApplyGreenYellowTheme, Themes.ApplyYellowPurpleTheme, Themes.ApplyRedBlueTheme, Themes.ApplyImGuiClassicTheme, Themes.ApplyImGuiDarkTheme, Themes.ApplyImGuiLightTheme, Themes.ApplyCustomDarkTheme, Themes.ApplyCustomLightTheme, };
+    public readonly static List<Theme> Themes = new()
+    {
+        ConfigHandler.Config.customDarkTheme,
+        ConfigHandler.Config.customLightTheme,
+        new Theme("Mint & Lemon Peel",          Hex("#23950FFF"), Hex("#FFDD00FF"), true),
+        new Theme("Favourite Worst Nightmare",  Hex("#928702FF"), Hex("#928702FF"), true),
+        new Theme("Humbug",                     Hex("#530D40FF"), Hex("#DCD6B8FF"), true),
+        new Theme("Tranquility Base Hotel",     Hex("#724212FF"), Hex("#DA9C38FF"), true),
+        new Theme("The Car",                    Hex("#D4CCC4FF"), Hex("#B6AA8CFF"), false),
+        new Theme("Showbiz",                    Hex("#377EB5FF"), Hex("#76BBD3FF"), true),
+        new Theme("Origin of Symmetry",         Hex("#D79141FF"), Hex("#78B4D2FF"), false),
+        new Theme("Black Holes & Revelations",  Hex("#4663DDFF"), Hex("#AA603CFF"), true),
+        new Theme("Simulation Theory",          Hex("#B9417DFF"), Hex("#6496E6FF"), true),
+        new Theme("Currents",                   Hex("#573A78FF"), Hex("#D73C3CFF"), true),
+        new Theme("Mario Circuit",              Hex("#FF8282FF"), Hex("#1A15BFFF"), false),
+        new Theme("Luigi's Mansion",            Hex("#0A710AFF"), Hex("#1E6FE4FF"), true),
+        new Theme("Wario Stadium",              Hex("#A314BCFF"), Hex("#F1D70EFF"), true),
+        new Theme("Peach Beach",                Hex("#F67CD6FF"), Hex("#F9C622FF"), false),
+    };
 
     public static void ApplyMorph()
     {
@@ -23,102 +41,14 @@ public static class Themes
         style.GrabMinSize = 10.0f;
     }
 
-    public static void ApplyGreenYellowTheme()
+    public static void ApplyCurrentTheme()
     {
-        // DebugConsole.Info("Applying Green - Yellow Theme", "THEME");
-        var style = ImGui.GetStyle();
-        var colors = style.Colors;
-
-        // Example theme colors
-        colors[(int)ImGuiCol.Text] = new Vector4(0.95f, 0.96f, 0.98f, 1.00f);
-        colors[(int)ImGuiCol.TextDisabled] = new Vector4(0.50f, 0.50f, 0.50f, 1.00f);
-        colors[(int)ImGuiCol.WindowBg] = new Vector4(0.03f, 0.04f, 0.05f, 0.90f);
-        colors[(int)ImGuiCol.ChildBg] = new Vector4(0.03f, 0.04f, 0.05f, 0.90f);
-        colors[(int)ImGuiCol.PopupBg] = new Vector4(0.08f, 0.08f, 0.08f, 0.94f);
-        colors[(int)ImGuiCol.Border] = new Vector4(0.43f, 0.43f, 0.50f, 0.50f);
-        colors[(int)ImGuiCol.BorderShadow] = new Vector4(0.00f, 0.00f, 0.00f, 0.00f);
-
-        colors[(int)ImGuiCol.FrameBg] = new Vector4(0.20f, 0.21f, 0.22f, 0.90f);
-        colors[(int)ImGuiCol.FrameBgHovered] = new Vector4(0.25f, 0.26f, 0.27f, 0.90f);
-        colors[(int)ImGuiCol.FrameBgActive] = new Vector4(0.30f, 0.31f, 0.32f, 0.90f);
-
-        colors[(int)ImGuiCol.TitleBg] = new Vector4(0.09f, 0.20f, 0.10f, 0.90f);
-        colors[(int)ImGuiCol.TitleBgActive] = new Vector4(0.12f, 0.45f, 0.12f, 0.90f);
-        colors[(int)ImGuiCol.TitleBgCollapsed] = new Vector4(0.00f, 0.00f, 0.00f, 0.50f);
-
-        colors[(int)ImGuiCol.MenuBarBg] = new Vector4(0.14f, 0.14f, 0.14f, 1.00f);
-
-        colors[(int)ImGuiCol.ScrollbarBg] = new Vector4(0.02f, 0.02f, 0.02f, 0.53f);
-        colors[(int)ImGuiCol.ScrollbarGrab] = new Vector4(0.31f, 0.31f, 0.31f, 1.00f);
-        colors[(int)ImGuiCol.ScrollbarGrabHovered] = new Vector4(0.41f, 0.41f, 0.41f, 1.00f);
-        colors[(int)ImGuiCol.ScrollbarGrabActive] = new Vector4(0.51f, 0.51f, 0.51f, 1.00f);
-
-        colors[(int)ImGuiCol.CheckMark] = new Vector4(0.75f, 0.75f, 0.10f, 1.00f);
-        colors[(int)ImGuiCol.SliderGrab] = new Vector4(0.75f, 0.75f, 0.10f, 1.00f);
-        colors[(int)ImGuiCol.SliderGrabActive] = new Vector4(0.59f, 0.59f, 0.10f, 1.00f);
-
-        colors[(int)ImGuiCol.Button] = new Vector4(0.20f, 0.22f, 0.23f, 1.00f);
-        colors[(int)ImGuiCol.ButtonHovered] = new Vector4(0.28f, 0.50f, 0.28f, 1.00f);
-        colors[(int)ImGuiCol.ButtonActive] = new Vector4(0.06f, 0.53f, 0.06f, 1.00f);
-
-        colors[(int)ImGuiCol.Header] = new Vector4(0.20f, 0.22f, 0.23f, 0.55f);
-        colors[(int)ImGuiCol.HeaderHovered] = new Vector4(0.26f, 0.59f, 0.26f, 0.80f);
-        colors[(int)ImGuiCol.HeaderActive] = new Vector4(0.26f, 0.59f, 0.26f, 1.00f);
-
-        colors[(int)ImGuiCol.Separator] = new Vector4(0.43f, 0.43f, 0.50f, 0.50f);
-        colors[(int)ImGuiCol.SeparatorHovered] = new Vector4(0.10f, 0.40f, 0.75f, 0.78f);
-        colors[(int)ImGuiCol.SeparatorActive] = new Vector4(0.10f, 0.40f, 0.75f, 1.00f);
-
-        colors[(int)ImGuiCol.ResizeGrip] = new Vector4(0.26f, 0.59f, 0.26f, 0.20f);
-        colors[(int)ImGuiCol.ResizeGripHovered] = new Vector4(0.26f, 0.59f, 0.26f, 0.67f);
-        colors[(int)ImGuiCol.ResizeGripActive] = new Vector4(0.26f, 0.59f, 0.26f, 0.95f);
-
-        colors[(int)ImGuiCol.Tab] = new Vector4(0.18f, 0.20f, 0.21f, 1.00f);
-        colors[(int)ImGuiCol.TabHovered] = new Vector4(0.26f, 0.59f, 0.98f, 0.80f);
-
+        Theme theme = Themes[ConfigHandler.Config.themeIndex];
+        ApplyCustom(theme.main, theme.accent, theme.dark);
     }
-
-    public static void ApplyYellowPurpleTheme()
+    public static void ApplyTheme(Theme theme)
     {
-        // DebugConsole.Info("Applying Purple - Yellow Theme", "THEME");
-        ApplyCustom(new Vector4(0.6f, 0.6f, 0.2f, 1f), new Vector4(0.75f, 0.2f, 0.6f, 1f), true);
-    }
-
-    public static void ApplyRedBlueTheme()
-    {
-        // DebugConsole.Info("Applying Red - Yellow Theme", "THEME");
-        ApplyCustom(new Vector4(0.8f, 0.2f, 0.2f, 1f), new Vector4(0.2f, 0.3f, 0.8f, 1f), true);
-    }
-
-    public static void ApplyImGuiClassicTheme()
-    {
-        // DebugConsole.Info("Applying ImGui Classic Theme.", "THEME");
-        ImGui.StyleColorsClassic();
-    }
-
-    public static void ApplyImGuiDarkTheme()
-    {
-        // DebugConsole.Info("Applying ImGui Dark Theme.", "THEME");
-        ImGui.StyleColorsDark();
-    }
-
-    public static void ApplyImGuiLightTheme()
-    {
-        // DebugConsole.Info("Applying ImGui Light Theme.", "THEME");
-        ImGui.StyleColorsLight();
-    }
-
-    public static void ApplyCustomDarkTheme()
-    {
-        // DebugConsole.Info("Applying Custom Dark Theme", "THEME");
-
-        ApplyCustom(ConfigHandler.Config.customDarkThemeMain, ConfigHandler.Config.customDarkThemeAccent, true);
-    }
-    public static void ApplyCustomLightTheme()
-    {
-        // DebugConsole.Info("Applying Custom Light Theme", "THEME");
-
-        ApplyCustom(ConfigHandler.Config.customLightThemeMain, ConfigHandler.Config.customLightThemeAccent, false);
+        ApplyCustom(theme.main, theme.accent, theme.dark);
     }
 
     private static void ApplyCustom(Vector4 main, Vector4 accent, bool dark)
@@ -126,7 +56,7 @@ public static class Themes
         var style = ImGui.GetStyle();
         var colors = style.Colors;
 
-        Vector4 darkWindowBg = new(0.07f, 0.07f, 0.07f, 0.90f);
+        Vector4 darkWindowBg = new(0.10f, 0.10f, 0.10f, 0.90f);
         Vector4 darkChildBg = new(0.01f, 0.01f, 0.01f, 0.90f);
         Vector4 darkPopupBg = new(0.01f, 0.01f, 0.01f, 0.90f);
 
@@ -149,7 +79,6 @@ public static class Themes
 
         Vector4 lighterAccent = Lighter(accent, 1);
 
-        // Example theme colors
         if (dark)
         {
             colors[(int)ImGuiCol.Text] = new Vector4(0.95f, 0.95f, 0.95f, 1.00f);
@@ -174,7 +103,10 @@ public static class Themes
             colors[(int)ImGuiCol.HeaderActive] = Mix(lighterAccent, header);
 
             colors[(int)ImGuiCol.TextLink] = lighterAccent;
-        } else
+
+            colors[(int)ImGuiCol.Button] = Mix(button, notHovered);
+        }
+        else
         {
             button = new Vector4(0.9f, 0.9f, 0.9f, 1.0f);
             header = new Vector4(0.9f, 0.9f, 0.9f, 1.0f);
@@ -188,10 +120,10 @@ public static class Themes
             colors[(int)ImGuiCol.Border] = new Vector4(0.43f, 0.43f, 0.50f, 0.50f);
             colors[(int)ImGuiCol.BorderShadow] = new Vector4(0.00f, 0.00f, 0.00f, 0.00f);
 
-            colors[(int)ImGuiCol.FrameBg] = new Vector4(0.80f, 0.81f, 0.82f, 0.90f);
-            colors[(int)ImGuiCol.FrameBgHovered] = new Vector4(0.85f, 0.86f, 0.87f, 0.90f);
-            colors[(int)ImGuiCol.FrameBgActive] = new Vector4(0.90f, 0.91f, 0.92f, 0.90f);
-            
+            colors[(int)ImGuiCol.FrameBg] = Lighter(accent, 3);
+            colors[(int)ImGuiCol.FrameBgHovered] = Lighter(accent, 4);
+            colors[(int)ImGuiCol.FrameBgActive] = Lighter(accent, 4);
+
             colors[(int)ImGuiCol.TitleBgCollapsed] = new Vector4(1.00f, 1.00f, 1.00f, 0.50f);
 
             colors[(int)ImGuiCol.ButtonHovered] = Mix(lighterAccent, notActive);
@@ -201,6 +133,8 @@ public static class Themes
             colors[(int)ImGuiCol.HeaderActive] = Mix(lighterAccent, header);
 
             colors[(int)ImGuiCol.TextLink] = Mix(dim, accent);
+
+            colors[(int)ImGuiCol.Button] = Mix(Lighter(accent, 2), notHovered);
         }
 
         colors[(int)ImGuiCol.TitleBg] = Mix(main, titleBg, notActive);
@@ -216,8 +150,6 @@ public static class Themes
         colors[(int)ImGuiCol.CheckMark] = Mix(checkmark, accent);
         colors[(int)ImGuiCol.SliderGrab] = Mix(slider, accent, notActive);
         colors[(int)ImGuiCol.SliderGrabActive] = Mix(accent, slider);
-
-        colors[(int)ImGuiCol.Button] = Mix(button, notHovered);
 
         colors[(int)ImGuiCol.Header] = header;
 
@@ -257,5 +189,41 @@ public static class Themes
     private static Vector4 Mix(Vector4 v1, Vector4 v2, Vector4 v3, Vector4 v4)
     {
         return Mix(Mix(v1, v2), Mix(v3, v4));
+    }
+
+    // https://gist.github.com/SpaceSpeekerman/a2ec38b4f0d40de743b74c73f1f0846f
+    public static Vector4 Hex(string hexColor)
+    {
+        hexColor = hexColor.TrimStart('#'); // Remove '#' if present
+
+        // Parse hexadecimal values for red, green, blue, and alpha components
+        int r = int.Parse(hexColor.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+        int g = int.Parse(hexColor.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
+        int b = int.Parse(hexColor.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
+        int a = hexColor.Length == 8 ? int.Parse(hexColor.Substring(6, 2), System.Globalization.NumberStyles.HexNumber) : 255;
+
+        // Normalize the color values from 0-255 to 0-1 range
+        float rf = r / 255f;
+        float gf = g / 255f;
+        float bf = b / 255f;
+        float af = a / 255f;
+
+        return new Vector4(rf, gf, bf, af);
+    }
+}
+
+public class Theme
+{
+    public string name;
+    public Vector4 main;
+    public Vector4 accent;
+
+    public bool dark;
+    public Theme(string name, Vector4 main, Vector4 accent, bool dark)
+    {
+        this.name = name;
+        this.main = main;
+        this.accent = accent;
+        this.dark = dark;
     }
 }
