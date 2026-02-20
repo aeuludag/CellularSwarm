@@ -2,6 +2,7 @@ namespace CellularSwarm.Core.Data;
 
 public class SimulationData
 {
+    public string version = Simulation.VERSION;
     public int id;
     public string name = string.Empty;
     public Dictionary<string, CellData> cells = new();

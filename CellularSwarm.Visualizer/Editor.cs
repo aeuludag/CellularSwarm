@@ -68,7 +68,7 @@ public class Editor
 
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(8, 8));
 
-        WinPos(16, h - 16, 0, 1);
+        WinPosC(16, h - 16, 0, 1);
         if (ImGui.Begin("Window Manager", ImGuiWindowFlags.AlwaysAutoResize))
         {
 
@@ -126,7 +126,7 @@ public class Editor
         if         (showSimulationEditor)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowSimulationEditor(); }
         if                (showInspector)   { ShowInspectWindow(mouseHex); }
         if               (showCellEditor)   { ShowCellEditor(selectedCellCoords); }
-        if               (showGridEditor)   { WinPos(w - 16, h - 16, 1, 1); ShowGridEditor(); }
+        if               (showGridEditor)   { WinPosC(w - 16, h - 16, 1, 1); ShowGridEditor(); }
         if                  (showConsole)   { WinPos(w/2, h/2, 0.5f, 0.5f); ImGui.SetNextWindowSize(new Vector2(720, 600), ImGuiCond.Once); ShowConsole(); }
         if                 (showSettings)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowSettings(); }
         if                  (showWelcome)   { WinPos(w/2, h/2, 0.5f, 0.5f); ShowWelcome(); }
@@ -694,15 +694,16 @@ public class Editor
 
             if(ImGui.IsKeyDown(ImGuiKey.LeftShift))
             {
+                var isDark = ThemeHandler.GetCurrentTheme().dark;
                 foreach (var gene in simulation.Genes.Values)
                 {
                     if (gene.ShouldBeActive(cell))
                     {
-                        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.3f, 1f, 0.3f, 1f));
+                        ImGui.PushStyleColor(ImGuiCol.Text, isDark? new Vector4(0.5f, 1f, 0.5f, 1f) : new Vector4(0.2f, 0.6f, 0.2f, 1f));
                     }
                     else
                     {
-                        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.3f, 0.3f, 1f));
+                        ImGui.PushStyleColor(ImGuiCol.Text, isDark? new Vector4(1f, 0.5f, 0.5f, 1f) : new Vector4(0.8f, 0.2f, 0.2f, 1f));
                     }
                     ImGui.PushID($"gene{gene.id}");
                     ImGui.Text($"{gene.name}");
@@ -846,7 +847,7 @@ public class Editor
 
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize("Brush Size").X - 10);
             brushSize++;
-            if(ImGui.SliderInt("Brush Size", ref brushSize, 1, 12)) { brushSize = Math.Clamp(brushSize, 1, 12); }
+            if(ImGui.SliderInt("Brush Size", ref brushSize, 1, 24)) { brushSize = Math.Clamp(brushSize, 1, 24); }
             brushSize--;
 
 
@@ -1103,15 +1104,21 @@ public class Editor
             ConfigHandler.Config.backColor = v2c(bc2v);
             ConfigHandler.Config.outlineColor = v2c(oc2v);
 
+            ImGui.SeparatorText("Maximum FPS");
+
+            if(ImGui.InputInt("FPS", ref ConfigHandler.Config.maxFPS)) { ConfigHandler.Config.maxFPS = Math.Max(10, ConfigHandler.Config.maxFPS); Raylib.SetTargetFPS(ConfigHandler.Config.maxFPS); }
+
             ImGui.SeparatorText("Other");
 
+            ImGui.Checkbox("Show Welcome Screen", ref ConfigHandler.Config.showWelcome);
+
+            ImGui.Checkbox("Pin Window Positions", ref ConfigHandler.Config.keepWindowsInPlace);
+            
             if(ImGui.Checkbox("Use Multithreading", ref ConfigHandler.Config.useParallel))
             {
                 renderer.SetParallel();
             }
             HoverTooltip("Use multiple threads for computation.\nDisable if you encounter stutters often.");
-
-            ImGui.Checkbox("Show Welcome Screen", ref ConfigHandler.Config.showWelcome);
 
             ImGui.SeparatorText("Simulations Path");
 
@@ -1165,7 +1172,7 @@ public class Editor
             ImGui.Separator();
 
             ImGui.Text(" Cellular Swarm is a life simulator that lets you create your own life forms using custom genes & molecules you define.");
-            ImGui.Text(" Start playing around with the sample simulations! Type \"sample1\" to the save & load window on your top right and click import.");
+            ImGui.Text(" Start playing around with the sample simulations! Open the included \"Samples\" folder and drag & drop a file here to open.");
             
             ImGui.Separator(); // -----------
 
@@ -1538,7 +1545,7 @@ public class Editor
         ImGui.PopItemWidth();
     }
 
-    void HoverTooltip(string text)
+    public static void HoverTooltip(string text)
     {
         if (ImGui.IsItemHovered())
         {
@@ -1551,6 +1558,10 @@ public class Editor
     public static void WinPos(float x, float y, float px, float py)
     {
         ImGui.SetNextWindowPos(new Vector2(x, y), ImGuiCond.Once, new Vector2(px, py));
+    }
+    public static void WinPosC(float x, float y, float px, float py) // c as in conditional and not communism though that would be dope
+    {
+        ImGui.SetNextWindowPos(new Vector2(x, y), ConfigHandler.Config.keepWindowsInPlace ? ImGuiCond.Always : ImGuiCond.Once, new Vector2(px, py));
     }
 
     public enum GridState

@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using CellularSwarm.Core;
 using CellularSwarm.Visualizer;
 using static CellularSwarm.Visualizer.Editor;
+using System.Diagnostics;
 
 ConfigHandler.LoadConfig();
 
@@ -20,9 +21,9 @@ float hexSize = 50f;
 
 Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
 Raylib.InitWindow(width, height, "Cellular Swarm");
-Raylib.SetWindowPosition(0, 0);
-Raylib.SetWindowMinSize(400, 400);
-Raylib.SetTargetFPS(60);
+// Raylib.SetWindowPosition(0, 0);
+Raylib.SetWindowMinSize(800, 400);
+Raylib.SetTargetFPS(ConfigHandler.Config.maxFPS);
 Raylib.SetExitKey(KeyboardKey.Null);
 // // Image icon = Raylib.LoadImage("icon.png");
 // Image icon = Raylib.GenImageColor(32, 32, Color.Red);
@@ -54,8 +55,7 @@ var mouseHex = new HexCoords(0, 0);
 var showHexCursor = false;
 var showInspectCursor = false;
 
-SaveLoadHandler saveLoadHandler = new();
-string saveLoadPath = "default";
+string simulationName = "default";
 
 var backColor = new Color(40, 40, 40);
 var outlineColor = new Color(80, 80, 80);
@@ -104,6 +104,18 @@ DebugConsole.Log(new Vector4(0.0f, 0.9f, 0.9f, 1f), $"Type !help to see availabl
 // List<int> multiplicationTimes = new();
 // List<int> diffusionTimes = new();
 // List<int> apoptosisTimes = new();
+
+DebugConsole.Info("Checking for arguments.", "RENDERER");
+var commandlineArgs = Environment.GetCommandLineArgs();
+if(commandlineArgs.Length != 1)
+{
+    var path = commandlineArgs[1];
+    DebugConsole.Info($"Found arg to be [{path}].", "RENDERER");
+
+    simulationRenderer = SaveLoadHandler.LoadSimulation(path);
+    editor.renderer = simulationRenderer;
+    SetTitle();
+}
 
 DebugConsole.Info("Starting program loop.", "RENDERER");
 
@@ -208,11 +220,13 @@ void DrawUI()
 {
     rlImGui.Begin();
 
+    var w = ImGui.GetIO().DisplaySize.X;
+
     ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(8, 8));
-    Editor.WinPos(width - 16, 16, 1, 0);
+    Editor.WinPosC(w - 16, 16, 1, 0);
     Controls();
 
-    Editor.WinPos(width - 16, 112, 1, 0);
+    Editor.WinPosC(w - 16, 112, 1, 0);
     SaveLoadWindow();
     ImGui.PopStyleVar();
     editor.ShowWindowManager(mouseHex);
@@ -294,8 +308,9 @@ void MoveCameraWithMouse()
 
 void SetZoomWithKeyboard()
 {
-    if (Raylib.IsKeyDown(KeyboardKey.E)) { camera.Zoom *= 1.05f; }
-    if (Raylib.IsKeyDown(KeyboardKey.Q)) { camera.Zoom *= 0.95f; }
+    var dt = Raylib.GetFrameTime();
+    if (Raylib.IsKeyDown(KeyboardKey.E)) { camera.Zoom *= (1.00f + 5f * dt); }
+    if (Raylib.IsKeyDown(KeyboardKey.Q)) { camera.Zoom *= (1.00f - 5f * dt); }
     camera.Zoom = Math.Clamp(camera.Zoom, camMin, camMax);
 }
 
@@ -323,6 +338,7 @@ void ControlSimulationWithKeyboard()
 
         DebugConsole.Info(play ? "Resuming simulation." : "Pausing simulation.", "RENDERER");
     }
+    if (Raylib.IsKeyPressed(KeyboardKey.Zero)) { DebugConsole.Info("Reset zoom.", "RENDERER"); camera.Zoom = 1.0f; center = camera.Target = new(0, 0); };
     if (Raylib.IsKeyPressed(KeyboardKey.C)) { DebugConsole.Info("Clearing grid.", "RENDERER"); simulationRenderer.ClearGrid(); }
     // if (Raylib.IsKeyPressed(KeyboardKey.R)) { ResetSimulation(); }
 }
@@ -446,29 +462,74 @@ void Controls()
 
 void SaveLoadWindow()
 {
+    if(Raylib.IsFileDropped())
+    {
+        // gemini generated
+        DebugConsole.Warning("File dropped.", "DRAGDROP");
+        FilePathList droppedFiles = Raylib.LoadDroppedFiles();
+        unsafe 
+        {
+            string filePath = Marshal.PtrToStringAnsi((IntPtr)droppedFiles.Paths[0]) ?? "";
+            DebugConsole.Warning($"Received file from [{filePath}].", "DRAGDROP");
+
+            simulationRenderer = SaveLoadHandler.LoadSimulation(filePath);
+            editor.renderer = simulationRenderer;
+            SetTitle();
+        }
+        Raylib.UnloadDroppedFiles(droppedFiles);
+    }
+
     if (ImGui.Begin("Save & Load", ImGuiWindowFlags.AlwaysAutoResize))
     {
-        ImGui.InputText(".csim", ref saveLoadPath, 64);
+        // ImGui.PushTextWrapPos(64*4);
+        // if (SaveLoadHandler.BadLoad)
+        // {
+        //     ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0f, 0f, 1f));
+        //     ImGui.Text($"Error while loading.");
+        //     ImGui.PopStyleColor();
+        // } else
+        // {
+        //     ImGui.TextDisabled("Load from Simulations folder or drag & drop file here.");
+        // }
+        // ImGui.PushItemWidth(196);
+        ImGui.InputText(".csim", ref simulationName, 64);
+        // ImGui.PopItemWidth();
+        Editor.HoverTooltip("File name in Simulations folder");
         ImGui.Separator();
         
         if (ImGui.Button(FontAwesome6.Upload + " Export"))
         {
-            saveLoadHandler.SaveSimulation(GetSimulation(), simulationRenderer, saveLoadPath);
-            saveLoadHandler.badLoad = false;
+            SaveLoadHandler.SaveSimulationToSimulationsFolder(GetSimulation(), simulationRenderer, simulationName);
+            SaveLoadHandler.BadLoad = false;
         }
+        Editor.HoverTooltip("Save to Simulations folder");
         ImGui.SameLine();
         if (ImGui.Button(FontAwesome6.Download + " Import"))
         {
-            simulationRenderer = saveLoadHandler.LoadSimulation(saveLoadPath);
+            simulationRenderer = SaveLoadHandler.LoadSimulationFromSimulationsFolder(simulationName);
             editor.renderer = simulationRenderer;
+            SetTitle();
         }
-        if (saveLoadHandler.badLoad)
+        Editor.HoverTooltip("Load from Simulations folder");
+        ImGui.SameLine();
+        if (ImGui.Button($"{FontAwesome6.Folder}##sim"))
         {
-            ImGui.SameLine();
+            Process.Start(new ProcessStartInfo(fileName: ConfigHandler.Config.simulationsPath) {UseShellExecute = true, Verb = "open"});
+        }
+        Editor.HoverTooltip("Open Simulations folder");
+        ImGui.SameLine();
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, 0);
+        ImGui.BeginChild("info", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y));
+        // ImGui.Text($"{FontAwesome6.Info}");
+        if (SaveLoadHandler.BadLoad)
+        {
             ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0f, 0f, 1f));
-            ImGui.Text($"No such file.");
+            ImGui.Text($"Error!");
             ImGui.PopStyleColor();
         }
+        ImGui.EndChild();
+        ImGui.PopStyleColor();
+        Editor.HoverTooltip("Or drag & drop a file");
     }
     ImGui.End();
 }
@@ -479,4 +540,10 @@ void ResetSimulation()
     simulationRenderer = new(new(DateTime.Now.Millisecond, $"new-{DateTime.Now:fffffff}"));
     editor.renderer = simulationRenderer;
     simulationRenderer.SetParallel();
+    SetTitle();
+}
+
+void SetTitle()
+{
+    Raylib.SetWindowTitle($"\"{simulationRenderer.Simulation.name}\" - Cellular Swarm");
 }

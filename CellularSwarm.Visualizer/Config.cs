@@ -10,8 +10,10 @@ public class Config
     public int themeIndex;
     public bool useParallel;
     public bool showWelcome;
+    public bool keepWindowsInPlace;
     public int width;
     public int height;
+    public int maxFPS;
     public Color backColor;
     public Color outlineColor;
     public Theme customDarkTheme = new("Custom Dark", new Vector4(0.2f, 0.2f, 0.2f, 1f), new Vector4(0.8f, 0.8f, 0.8f, 1f), true);
@@ -27,10 +29,12 @@ public class Config
         themeIndex = 2;
         useParallel = true;
         showWelcome = true;
+        keepWindowsInPlace = false;
         width = 1080;
         height = 720;
-        backColor = new(40, 40, 40);
-        outlineColor = new(80, 80, 80);
+        maxFPS = 60;
+        backColor = new(20, 20, 20);
+        outlineColor = new(30, 30, 30);
         customDarkTheme.main = new Vector4(0.2f, 0.2f, 0.2f, 1f);
         customDarkTheme.accent = new Vector4(0.8f, 0.8f, 0.8f, 1f);
         customLightTheme.main = new Vector4(0.8f, 0.8f, 0.8f, 1f);

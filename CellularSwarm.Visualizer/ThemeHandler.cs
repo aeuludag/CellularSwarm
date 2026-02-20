@@ -25,6 +25,11 @@ public static class ThemeHandler
         new Theme("Peach Beach",                Hex("#F67CD6FF"), Hex("#F9C622FF"), false),
     };
 
+    public static Theme GetCurrentTheme()
+    {
+        return Themes[ConfigHandler.Config.themeIndex];
+    }
+
     public static void ApplyMorph()
     {
         var style = ImGui.GetStyle();
@@ -43,7 +48,7 @@ public static class ThemeHandler
 
     public static void ApplyCurrentTheme()
     {
-        Theme theme = Themes[ConfigHandler.Config.themeIndex];
+        Theme theme = GetCurrentTheme();
         ApplyCustom(theme.main, theme.accent, theme.dark);
     }
     public static void ApplyTheme(Theme theme)

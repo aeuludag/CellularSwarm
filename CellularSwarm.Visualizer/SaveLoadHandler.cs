@@ -8,16 +8,15 @@ namespace CellularSwarm.Visualizer;
 
 public class SaveLoadHandler
 {
-    public string folder;
-    public bool badLoad = false;
+    public static SaveLoadHandler Instance = new();
+    public static bool BadLoad
+    {
+        get => Instance.badLoad;
+        set => Instance.badLoad = value;
+    }
+    public bool badLoad;
     public SaveLoadHandler()
     {
-        // folder = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "";
-        // folder = Directory.GetParent(folder)!.ContainedName;
-        // folder = Directory.GetParent(folder)!.ContainedName;
-        // folder = Path.Combine(folder, "Simulations");
-        // var location = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        // location = Path.Combine(location, "Simulations");
         var location = ConfigHandler.Config.simulationsPath;
         DebugConsole.Info($"Simulation locations are configured to [{location}].", "SAVELOAD");
         if (Path.Exists(location))
@@ -29,45 +28,55 @@ public class SaveLoadHandler
             DebugConsole.Warning("Path does not exist. Trying to create one.", "SAVELOAD");
             Directory.CreateDirectory(location);
         }
-        folder = location;
     }
-    public void SaveSimulation(Simulation simulation, SimulationRenderer simulationRenderer, string name = "")
+
+    public static void SaveSimulationToSimulationsFolder(Simulation simulation, SimulationRenderer simulationRenderer, string name = "")
     {
-        DebugConsole.Info($"Exporting simulation [{name}] to path: [{folder}].", "SAVELOAD");
+        SaveSimulation(simulation, simulationRenderer, Path.Combine(ConfigHandler.Config.simulationsPath, $"{name}.csim"));
+    }
+
+    public static SimulationRenderer LoadSimulationFromSimulationsFolder(string name)
+    {
+        return LoadSimulation(Path.Combine(ConfigHandler.Config.simulationsPath, $"{name}.csim"));
+    }
+
+    public static void SaveSimulation(Simulation simulation, SimulationRenderer simulationRenderer, string path = "")
+    {
+        DebugConsole.Info($"Exporting simulation to path: [{path}].", "SAVELOAD");
 
         // var serializedSimulation = Serializer.Serialize(simulation);
         // var serializedSimulationRenderer = VisualizationData.Serialize(simulationRenderer);
 
         var serializedContainedSimulation = ContainedSimulationData.Serialize(ContainedSimulationData.FromContainedSimulation(new ContainedSimulation(simulation, simulationRenderer)));
 
-        if (name == "") { name = simulation.name; }
+        if (path == "") { path = ConfigHandler.Config.simulationsPath; }
 
-        File.WriteAllText(Path.Combine(folder, $"{name}.csim"), serializedContainedSimulation);
+        File.WriteAllText(path, serializedContainedSimulation);
 
         // File.WriteAllText(Path.Combine(folder, $"{name}.json"), serializedSimulation);
         // File.WriteAllText(Path.Combine(folder, $"{name}.vis.json"), serializedSimulationRenderer);
 
         return;
     }
-    public SimulationRenderer LoadSimulation(string name)
+    public static SimulationRenderer LoadSimulation(string path)
     {
-        DebugConsole.Info($"Loading simulation [{name}] from path: [{folder}]", "IO");
+        DebugConsole.Info($"Loading simulation from path: [{path}]", "IO");
         try
         {
-            var containedSimulationData = ContainedSimulationData.Deserialize(File.ReadAllText(Path.Combine(folder, $"{name}.csim")));
+            var containedSimulationData = ContainedSimulationData.Deserialize(File.ReadAllText(path));
             var simulation = SimulationData.ToSimulation(containedSimulationData.simulationData);
             var simulationRenderer = VisualizationData.ToSimulationRenderer(containedSimulationData.visualizationData, simulation);
             
-            badLoad = false;
+            Instance.badLoad = false;
             return simulationRenderer;
         }
         catch (Exception e)
         {
-            DebugConsole.Error($"Error while loading simulation [{name}].", "IO");
+            DebugConsole.Error($"Error while loading simulation from [{path}].", "IO");
             DebugConsole.Error(e.Message, "IO");
             DebugConsole.Warning("Loading a default simulation.", "IO");
             var simulation = new Simulation(0, "default-error");
-            badLoad = true;
+            Instance.badLoad = true;
             return new SimulationRenderer(simulation);
         }
     }

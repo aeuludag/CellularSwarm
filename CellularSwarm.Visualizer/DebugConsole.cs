@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Numerics;
 using System.Text;
+using ImGuiNET;
+using Raylib_cs;
 
 namespace CellularSwarm.Visualizer;
 
@@ -26,6 +28,7 @@ public class DebugConsole
         var clear = new Command("clear", ["clear", "clr"]);
         var setprefix = new Command("setprefix", ["setprefix", "prefix"], 2);
         var simclear = new Command("simclear", ["simclear", "simclr"]);
+        var rainbow = new Command("rainbow", ["rainbow"], 2);
         var help = new Command("help", ["help"]);
 
         clear.CommandAction = args =>
@@ -46,6 +49,40 @@ public class DebugConsole
             DebugConsole.Info("Clear simulation grid.", "CONSOLE");
         };
 
+        var threadShouldRun = false;
+        rainbow.CommandAction = args =>
+        {
+            var rainbowThread = new Thread(new ThreadStart(()=>
+            {
+                var oldBack = ConfigHandler.Config.backColor;
+                var oldOut = ConfigHandler.Config.outlineColor;
+                while(!Raylib.WindowShouldClose() && threadShouldRun)
+                {
+                    var backColor = Raylib.ColorFromHSV( 1f/2f * 360 * ((float)(1000f * (DateTime.Now.Second % 2)) + (float)DateTime.Now.Millisecond) / 1000f, 1f, 0.5f);
+                    var invBackColor = new Color(255, 255, 255, 127);
+                    // var invBackColor = Raylib.ColorFromHSV( 360 * (1000f - (float)DateTime.Now.Millisecond) / 1000f, 1f, 1f);
+                    ConfigHandler.Config.backColor = backColor;
+                    ConfigHandler.Config.outlineColor = invBackColor;
+                }
+                ConfigHandler.Config.backColor = oldBack;
+                ConfigHandler.Config.outlineColor = oldOut;
+            }));
+            
+            if(args[1] == "on")
+            {
+                if(threadShouldRun) return;
+
+                DebugConsole.Info("Rainbow ON", "CONSOLE");
+
+                threadShouldRun = true;
+                rainbowThread.Start();
+            } else
+            {
+                DebugConsole.Info("Rainbow OFF", "CONSOLE");
+                threadShouldRun = false;
+            }
+        };
+
         help.CommandAction = args =>
         {
             Info(
@@ -53,11 +90,12 @@ public class DebugConsole
 {prefix}help: This message.
 {prefix}setprefix <prefix>: Set prefix.
 {prefix}clear: Clear the console.
-{prefix}simclear: Clear the simulation grid.",
+{prefix}simclear: Clear the simulation grid.
+{prefix}rainbow <on | off>: Flashing lights warning! Turns the screen rainbow.",
     "CONSOLE");
         };
 
-        Command[] commandsArray = [clear, setprefix, help, simclear];
+        Command[] commandsArray = [clear, setprefix, help, simclear, rainbow];
 
         foreach (Command command in commandsArray)
         {
