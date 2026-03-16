@@ -1064,31 +1064,64 @@ public class Editor
             ImGui.Separator();
             ImGui.SeparatorText("UI");
 
-            int currentThemeIndex = Selector($"themeSelector{key}", "Theme", range, getName, ConfigHandler.Config.themeIndex);
-            if(ConfigHandler.Config.themeIndex != currentThemeIndex)
+            int currentThemeIndex = ConfigHandler.Config.themeIndex;
+
+            float rand() => (float)random.Next() / (float)int.MaxValue;
+            if(ImGui.Button("New"))
             {
-                ConfigHandler.Config.themeIndex = currentThemeIndex;
-                ThemeHandler.ApplyCurrentTheme();
+                ConfigHandler.Config.customThemes.Add(
+                    new($"Custom Theme #{ConfigHandler.Config.customThemes.Count + 1}",
+                    new Vector4(rand(), rand(), rand(), 1f),
+                    new Vector4(rand(), rand(), rand(), 1f),
+                    rand() > 0.5f));
+                currentThemeIndex = ThemeHandler.Themes.Count - 1;
+                // ConfigHandler.Config.themeIndex = ThemeHandler.Themes.Count - 1;
             }
 
-            if(ThemeHandler.Themes[ConfigHandler.Config.themeIndex].name == "Custom Dark")
-            {
-                if(ImGui.ColorEdit4("Main", ref ConfigHandler.Config.customDarkTheme.main)) ThemeHandler.ApplyCurrentTheme();
-                if(ImGui.ColorEdit4("Accent", ref ConfigHandler.Config.customDarkTheme.accent)) ThemeHandler.ApplyCurrentTheme();
-                
-            } else if(ThemeHandler.Themes[ConfigHandler.Config.themeIndex].name == "Custom Light")
-            {
-                if(ImGui.ColorEdit4("Main", ref ConfigHandler.Config.customLightTheme.main)) ThemeHandler.ApplyCurrentTheme();
-                if(ImGui.ColorEdit4("Accent", ref ConfigHandler.Config.customLightTheme.accent)) ThemeHandler.ApplyCurrentTheme();
+            ImGui.SameLine();
 
+            RedButton(() =>
+            {
+                if(currentThemeIndex < ThemeHandler.PresetThemes.Count)
+                {
+                    ImGui.BeginDisabled();
+                    ImGui.Button(IconFonts.FontAwesome6.TrashCan);
+                    ImGui.EndDisabled();
+                    return;
+                }
+                if(ImGui.Button(IconFonts.FontAwesome6.TrashCan))
+                {
+                    ConfigHandler.Config.customThemes.RemoveAt(currentThemeIndex - ThemeHandler.PresetThemes.Count);
+                    currentThemeIndex = Math.Max(0, currentThemeIndex - 1);
+                }
+            });
+
+            ImGui.SameLine();
+
+            ConfigHandler.Config.themeIndex = currentThemeIndex;
+
+            currentThemeIndex = Selector($"themeSelector{key}", "Theme", range, getName, ConfigHandler.Config.themeIndex);
+
+            ThemeHandler.ApplyCurrentTheme();
+
+            if(ConfigHandler.Config.themeIndex >= ThemeHandler.PresetThemes.Count)
+            {
+                var currentTheme = ThemeHandler.GetCurrentTheme();
+                ImGui.InputText("Name", ref currentTheme.name, 32);
+                if(ImGui.ColorEdit4("Main", ref currentTheme.main)) ThemeHandler.ApplyCurrentTheme();
+                if(ImGui.ColorEdit4("Accent", ref currentTheme.accent)) ThemeHandler.ApplyCurrentTheme();
+                if(ImGui.Checkbox("Use Dark Appearance", ref currentTheme.dark)) ThemeHandler.ApplyCurrentTheme();
+                
             } else
             {
-                var currentTheme = ThemeHandler.Themes[currentThemeIndex];
+                var currentTheme = ThemeHandler.GetCurrentTheme();
                 var main = currentTheme.main;
                 var accent = currentTheme.accent;
+                // var dark = currentTheme.dark;
                 ImGui.BeginDisabled();
                 ImGui.ColorEdit4("Main", ref main);
                 ImGui.ColorEdit4("Accent", ref accent);
+                // ImGui.Checkbox("Dark", ref dark);
                 ImGui.EndDisabled();
             }
 

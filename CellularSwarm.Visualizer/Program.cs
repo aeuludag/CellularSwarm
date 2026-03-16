@@ -87,7 +87,7 @@ unsafe
 }
 
 ThemeHandler.ApplyMorph();
-ThemeHandler.ApplyTheme(ThemeHandler.Themes[ConfigHandler.Config.themeIndex]);
+ThemeHandler.ApplyCurrentTheme();
 ResetSimulation();
 
 DebugConsole.Log(new Vector4(1.0f, 0.2f, 0.2f, 1f), "Cellular Swarm", "aeuludag");

@@ -16,8 +16,7 @@ public class Config
     public int maxFPS;
     public Color backColor;
     public Color outlineColor;
-    public Theme customDarkTheme = new("Custom Dark", new Vector4(0.2f, 0.2f, 0.2f, 1f), new Vector4(0.8f, 0.8f, 0.8f, 1f), true);
-    public Theme customLightTheme = new("Custom Light", new Vector4(0.8f, 0.8f, 0.8f, 1f),  new Vector4(0.2f, 0.2f, 0.2f, 1f), false);
+    public List<Theme> customThemes = new();
     public Config()
     {
         Reset();
@@ -35,9 +34,8 @@ public class Config
         maxFPS = 60;
         backColor = new(20, 20, 20);
         outlineColor = new(30, 30, 30);
-        customDarkTheme.main = new Vector4(0.2f, 0.2f, 0.2f, 1f);
-        customDarkTheme.accent = new Vector4(0.8f, 0.8f, 0.8f, 1f);
-        customLightTheme.main = new Vector4(0.8f, 0.8f, 0.8f, 1f);
-        customLightTheme.accent = new Vector4(0.2f, 0.2f, 0.2f, 1f);
+        // Theme customDarkTheme = new("Custom Dark 1", new Vector4(0.2f, 0.2f, 0.2f, 1f), new Vector4(0.8f, 0.8f, 0.8f, 1f), true);
+        // Theme customLightTheme = new("Custom Light 2", new Vector4(0.8f, 0.8f, 0.8f, 1f),  new Vector4(0.2f, 0.2f, 0.2f, 1f), false);
+        // customThemes = [customDarkTheme, customLightTheme];
     }
 }

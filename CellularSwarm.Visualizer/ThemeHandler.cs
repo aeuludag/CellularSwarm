@@ -5,10 +5,8 @@ namespace CellularSwarm.Visualizer;
 
 public static class ThemeHandler
 {
-    public readonly static List<Theme> Themes = new()
+    public readonly static List<Theme> PresetThemes = new()
     {
-        ConfigHandler.Config.customDarkTheme,
-        ConfigHandler.Config.customLightTheme,
         new Theme("Mint & Lemon Peel",          Hex("#23950FFF"), Hex("#FFDD00FF"), true),
         new Theme("Favourite Worst Nightmare",  Hex("#928702FF"), Hex("#928702FF"), true),
         new Theme("Humbug",                     Hex("#530D40FF"), Hex("#DCD6B8FF"), true),
@@ -25,8 +23,11 @@ public static class ThemeHandler
         new Theme("Peach Beach",                Hex("#F67CD6FF"), Hex("#F9C622FF"), false),
     };
 
+    public static List<Theme> Themes { get => [..PresetThemes, ..ConfigHandler.Config.customThemes]; }
+
     public static Theme GetCurrentTheme()
     {
+        if(ConfigHandler.Config.themeIndex > Themes.Count - 1) ConfigHandler.Config.themeIndex = 0;
         return Themes[ConfigHandler.Config.themeIndex];
     }
 

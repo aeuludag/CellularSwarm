@@ -6,7 +6,7 @@ using Raylib_cs;
 
 public class SimulationRenderer
 {
-    public const string VERSION = "0.1.260116";
+    public const string VERSION = "0.1.260316";
     public const string RENDERER = "Default Limon Renderer";
     public Simulation Simulation { get => _simulation; set => _simulation = value; }
     public VisualizationType visualizationType = VisualizationType.ThreeMorphogens;
