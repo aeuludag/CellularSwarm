@@ -13,8 +13,14 @@ public class VisualizationData
     public int redMorphogenId = -1;
     public int greenMorphogenId = -1;
     public int blueMorphogenId = -1;
-    public int singleMorphogenId = 0;
+    public int singleMorphogenId = -1;
     public float amplifier = 1f;
+    public int geneId = -1;
+    public Color activeGeneColor = new Color(0.75f, 0.3f, 0.3f, 1f);
+    public Color inactiveGeneColor = new Color(0.2f, 0.5f, 0.75f, 1f);
+    public int geneConditionId = -1;
+    public Color metConditionColor = new Color(0.3f, 0.8f, 0.25f, 1f);
+    public Color notMetConditionColor = new Color(0.7f, 0.25f, 0.25f, 1f);
 
     public static VisualizationData FromSimulationRenderer(SimulationRenderer renderer)
     {
@@ -27,7 +33,13 @@ public class VisualizationData
             greenMorphogenId = renderer.greenMorphogenId,
             blueMorphogenId = renderer.blueMorphogenId,
             singleMorphogenId = renderer.singleMorphogenId,
-            amplifier = renderer.amplifier
+            amplifier = renderer.amplifier,
+            geneId = renderer.geneId,
+            activeGeneColor = renderer.activeGeneColor,
+            inactiveGeneColor = renderer.inactiveGeneColor,
+            geneConditionId = renderer.geneConditionId,
+            metConditionColor = renderer.metConditionColor,
+            notMetConditionColor = renderer.notMetConditionColor,
         };
 
         return data;
@@ -43,6 +55,12 @@ public class VisualizationData
             blueMorphogenId = data.blueMorphogenId,
             singleMorphogenId = data.singleMorphogenId,
             amplifier = data.amplifier,
+            geneId = data.geneId,
+            activeGeneColor = data.activeGeneColor,
+            inactiveGeneColor = data.inactiveGeneColor,
+            geneConditionId = data.geneConditionId,
+            metConditionColor = data.metConditionColor,
+            notMetConditionColor = data.notMetConditionColor,
             cellTypeColors = data.cellTypeColors,
             cellPalette = data.cellPalette.Select(c => (CellData.ToCell(simulation, c.cell), c.name)).ToList()
         };

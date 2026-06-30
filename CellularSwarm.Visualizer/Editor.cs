@@ -36,12 +36,13 @@ public class Editor
 
     public static readonly Vector4 RED_WARNING = new(0.9f, 0f, 0f, 1f);
     public static readonly Vector4 RED_LIGHT = new(1f, 0.7f, 0.7f, 1f);
-    public static readonly Vector4 RED_DARK = new(0.7f, 0.2f, 0.2f, 1f);
+    public static readonly Vector4 RED_DARK = new(0.5f, 0.1f, 0.1f, 1f);
     public static readonly Vector4 GREEN_LIGHT = new(0.7f, 1f, 0.7f, 1f);
-    public static readonly Vector4 GREEN_DARK = new(0.2f, 0.7f, 0.2f, 1f);
+    public static readonly Vector4 GREEN_DARK = new(0.1f, 0.5f, 0.1f, 1f);
     public static readonly Vector4 BLUE_LIGHT = new(0.7f, 0.7f, 1f, 1f);
     public static readonly Vector4 BLUE_DARK = new(0.3f, 0f, 0f, 1f);
-    public static readonly Vector4 PURPLE_DARK = new(0.5f, 0.4f, 0.7f, 1f);
+    public static readonly Vector4 PURPLE_LIGHT = new(0.7f, 0.4f, 0.8f, 1f);
+    public static readonly Vector4 PURPLE_DARK = new(0.3f, 0.2f, 0.5f, 1f);
 
     private readonly static Random random = new();
 
@@ -165,7 +166,7 @@ public class Editor
 
             var name = cellType.name;
 
-            if (ImGui.InputText($"Name", ref name, 32)) { cellTypes[cellTypeId] = new CellType(cellTypeId, name); }
+            if (ImGui.InputText($"Name", ref name, 64)) { cellTypes[cellTypeId] = new CellType(cellTypeId, name); }
 
             List<string> referencedInConditions = new();
             List<string> referencedInActions = new();
@@ -237,7 +238,7 @@ public class Editor
             var decFac = morphogen.decayFactor;
             var max = simulation.maxConcentration;
 
-            if (ImGui.InputText($"Name", ref name, 32)) { morphogen.name = name; }
+            if (ImGui.InputText($"Name", ref name, 64)) { morphogen.name = name; }
             if (ImGui.SliderFloat($"Diffusion Factor##diffusionSlider", ref difFac, 0f, 1f)) { morphogen.diffusionFactor = Math.Clamp(difFac, 0f, 1f); }
             // ImGui.SameLine();
             // WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat($"Diffusion Factor", ref difFac)) { difFac = Math.Clamp(difFac, 0f, 1f); morphogen.diffusionFactor = difFac; } });
@@ -319,7 +320,7 @@ public class Editor
             var actionType = geneAction.actionType;
             var cellTypeId = geneAction.cellTypeId;
 
-            if (ImGui.InputText($"Name", ref name, 32)) { geneAction.name = name; }
+            if (ImGui.InputText($"Name", ref name, 64)) { geneAction.name = name; }
 
             actionType = (GeneAction.ActionType)Selector($"actionTypeSelector", $"Action Type",
             [0, 1, 2, 3, 4], (id) => ActionTypeToString((GeneAction.ActionType)id), (int)actionType);
@@ -334,7 +335,7 @@ public class Editor
                     break;
                 case GeneAction.ActionType.Multiply:
                     ImGui.SeparatorText("Morphogen Share Rate");
-                    HoverTooltip("0.0 : leave all to the parent\n0.5 : share equally (default)\n1.0 : give all to the child");
+                    HoverTooltip("0.0 : leave all to the parent\n0.5 : share equally (default)\n1.0 : give all to the daughter");
                     DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name);
                     break;
                 case GeneAction.ActionType.Apoptosis:
@@ -412,7 +413,7 @@ public class Editor
 
             ImGui.SeparatorText("Properties");
 
-            ImGui.InputText($"Name", ref name, 32);
+            ImGui.InputText($"Name", ref name, 64);
             ImGui.Checkbox($"Not", ref not);
             HoverTooltip("Inverts the condition, e.g. \"Only work when cell type is *not* stem\"");
 
@@ -575,24 +576,30 @@ public class Editor
 
             ImGui.SeparatorText("Properties");
 
-            if (ImGui.InputText($"Name", ref name, 32)) { gene.name = name; }
+            if (ImGui.InputText($"Name", ref name, 64)) { gene.name = name; }
 
-            ImGui.PushStyleColor(ImGuiCol.Header, GREEN_DARK);
+            var dark = ThemeHandler.GetCurrentTheme().dark;
+
+            ImGui.PushStyleColor(ImGuiCol.Header, dark ? GREEN_DARK : GREEN_LIGHT);
             // ImGui.SeparatorText("Activator Conditions");
             if (ImGui.CollapsingHeader("Activator Conditions"))
             {
+                ImGui.Checkbox("Any##activator", ref gene.activatorAny);
+                HoverTooltip("Unchecked: All conditions should be met\nChecked: Only one met condition is enough.");
                 ListEditor($"activator##{key}", "Activator Conditions", gene.activatorConditions, geneConditions, (condition) => condition.name);
             }
             ImGui.PopStyleColor();
 
-            ImGui.PushStyleColor(ImGuiCol.Header, RED_DARK);
+            ImGui.PushStyleColor(ImGuiCol.Header, dark ? RED_DARK : RED_LIGHT);
             if (ImGui.CollapsingHeader("Inhibitor Conditions"))
             {
+                ImGui.Checkbox("Any##inhibitor", ref gene.inhibitorAny);
+                HoverTooltip("Unchecked: All conditions should be met\nChecked: Only one met condition is enough.");
                 ListEditor($"inhibitor##{key}", "Inhibitor Conditions", gene.inhibitorConditions, geneConditions, (condition) => condition.name);
             }
             ImGui.PopStyleColor();
 
-            ImGui.PushStyleColor(ImGuiCol.Header, PURPLE_DARK);
+            ImGui.PushStyleColor(ImGuiCol.Header, dark? PURPLE_DARK : PURPLE_LIGHT);
             if (ImGui.CollapsingHeader("Actions"))
             {
                 ListEditor($"action##{key}", "Actions", gene.actions, geneActions, (action) => action.name);
@@ -634,7 +641,7 @@ public class Editor
 
             ImGui.SeparatorText("Properties");
 
-            if (ImGui.InputText("Name", ref name, 32)) { simulation.name = name; }
+            if (ImGui.InputText("Name", ref name, 64)) { simulation.name = name; Raylib.SetWindowTitle($"\"{name}\" - Cellular Swarm"); }
             if (ImGui.InputFloat("Diffusion Threshold", ref diffusionThreshold)) { diffuser.diffusionThreshold = Math.Max(0, diffusionThreshold); }
             if (ImGui.InputFloat("Diffusion Factor", ref diffusionFactor)) { diffuser.diffusionFactor = Math.Max(0, diffusionFactor); }
             if (ImGui.InputInt("Diffusion Steps", ref diffusionSteps)) { simulation.diffusionSteps = Math.Max(0, diffusionSteps); }
@@ -836,7 +843,7 @@ public class Editor
 
             renderer.cellIndex = Selector("cellPaletteIndex", "Cell to Draw", Enumerable.Range(0, renderer.cellPalette.Count).ToList(), (i) => renderer.cellPalette[i].name);
             var name = renderer.cellPalette[renderer.cellIndex].name;
-            if (ImGui.InputText("Cell Name", ref name, 32))
+            if (ImGui.InputText("Cell Name", ref name, 64))
             {
                 renderer.cellPalette[renderer.cellIndex] = (renderer.CellToDraw, name);
             }
@@ -870,7 +877,7 @@ public class Editor
 
             ImGui.Separator();
 
-            var visualizationType = Selector("visualizationType", "Mode", [0, 1, 2], VisualizationTypeToString, (int)renderer.visualizationType);
+            var visualizationType = Selector("visualizationType", "Mode", [0, 1, 2, 3, 4], VisualizationTypeToString, (int)renderer.visualizationType);
             ImGui.Separator();
 
             var morphogenKeys = morphogens.Keys.ToList();
@@ -883,9 +890,9 @@ public class Editor
 
                     ImGui.Separator();
 
-                    morphogenKeys.Remove(renderer.redMorphogenId);
-                    morphogenKeys.Remove(renderer.greenMorphogenId);
-                    morphogenKeys.Remove(renderer.blueMorphogenId);
+                    // morphogenKeys.Remove(renderer.redMorphogenId);
+                    // morphogenKeys.Remove(renderer.greenMorphogenId);
+                    // morphogenKeys.Remove(renderer.blueMorphogenId);
 
                     // ImGui.PushStyleColor(ImGuiCol.Text, RED_LIGHT);
                     renderer.redMorphogenId = SoftSelector("redMorphogen", "Red", morphogenKeys, (id) => morphogens[id].name, renderer.redMorphogenId);
@@ -922,6 +929,50 @@ public class Editor
                             renderer.cellTypeColors[cellTypeId] = new Color(colorVector.X, colorVector.Y, colorVector.Z);
                         }
                     }
+                    break;
+                case 3: // Gene Activity
+                    renderer.visualizationType = SimulationRenderer.VisualizationType.GeneActivity;
+
+                    renderer.geneId = Selector("gene", "Gene", simulation.Genes.Keys.ToList(), (id) => simulation.Genes[id].name);
+                    
+                    ImGui.Separator();
+
+                    Color activeGeneColor = renderer.activeGeneColor;
+                    var activeGeneColorVector = new Vector3(activeGeneColor.R / 255f, activeGeneColor.G / 255f, activeGeneColor.B / 255f);
+                    if (ImGui.ColorEdit3($"Active Gene", ref activeGeneColorVector, ImGuiColorEditFlags.Float))
+                    {
+                        renderer.activeGeneColor = new Color(activeGeneColorVector.X, activeGeneColorVector.Y, activeGeneColorVector.Z);
+                    }
+
+                    Color inactiveGeneColor = renderer.inactiveGeneColor;
+                    var inactiveGeneColorVector = new Vector3(inactiveGeneColor.R / 255f, inactiveGeneColor.G / 255f, inactiveGeneColor.B / 255f);
+                    if (ImGui.ColorEdit3($"Inactive Gene", ref inactiveGeneColorVector, ImGuiColorEditFlags.Float))
+                    {
+                        renderer.inactiveGeneColor = new Color(inactiveGeneColorVector.X, inactiveGeneColorVector.Y, inactiveGeneColorVector.Z);
+                    }
+
+                    break;
+                case 4: // Gene Condition Met
+                    renderer.visualizationType = SimulationRenderer.VisualizationType.GeneConditionMet;
+
+                    renderer.geneConditionId = Selector("condition", "Gene Condition", simulation.GeneConditions.Keys.ToList(), (id) => simulation.GeneConditions[id].name);
+                    
+                    ImGui.Separator();
+
+                    Color metConditionColor = renderer.metConditionColor;
+                    var metConditionColorVector = new Vector3(metConditionColor.R / 255f, metConditionColor.G / 255f, metConditionColor.B / 255f);
+                    if (ImGui.ColorEdit3($"Met Condition", ref metConditionColorVector, ImGuiColorEditFlags.Float))
+                    {
+                        renderer.metConditionColor = new Color(metConditionColorVector.X, metConditionColorVector.Y, metConditionColorVector.Z);
+                    }
+
+                    Color notMetConditionColor = renderer.notMetConditionColor;
+                    var notMetConditionColorVector = new Vector3(notMetConditionColor.R / 255f, notMetConditionColor.G / 255f, notMetConditionColor.B / 255f);
+                    if (ImGui.ColorEdit3($"Not Met Condition", ref notMetConditionColorVector, ImGuiColorEditFlags.Float))
+                    {
+                        renderer.notMetConditionColor = new Color(notMetConditionColorVector.X, notMetConditionColorVector.Y, notMetConditionColorVector.Z);
+                    }
+
                     break;
                 default:
                     break;
@@ -1067,6 +1118,7 @@ public class Editor
             int currentThemeIndex = ConfigHandler.Config.themeIndex;
 
             float rand() => (float)random.Next() / (float)int.MaxValue;
+            bool uselessBoolThatIndicatesNewThemeWasJustRecentlyAddedRightNow = false;
             if(ImGui.Button("New"))
             {
                 ConfigHandler.Config.customThemes.Add(
@@ -1074,7 +1126,8 @@ public class Editor
                     new Vector4(rand(), rand(), rand(), 1f),
                     new Vector4(rand(), rand(), rand(), 1f),
                     rand() > 0.5f));
-                currentThemeIndex = ThemeHandler.Themes.Count - 1;
+                uselessBoolThatIndicatesNewThemeWasJustRecentlyAddedRightNow = true;
+                // currentThemeIndex = ThemeHandler.Themes.Count - 2;
                 // ConfigHandler.Config.themeIndex = ThemeHandler.Themes.Count - 1;
             }
 
@@ -1098,16 +1151,17 @@ public class Editor
 
             ImGui.SameLine();
 
-            ConfigHandler.Config.themeIndex = currentThemeIndex;
+            // ConfigHandler.Config.themeIndex = currentThemeIndex;
 
-            currentThemeIndex = Selector($"themeSelector{key}", "Theme", range, getName, ConfigHandler.Config.themeIndex);
-
-            ThemeHandler.ApplyCurrentTheme();
+            ConfigHandler.Config.themeIndex = Selector($"themeSelector{key}", "Theme", range, getName, currentThemeIndex);
+            
+            if(uselessBoolThatIndicatesNewThemeWasJustRecentlyAddedRightNow)
+                ConfigHandler.Config.themeIndex = ThemeHandler.Themes.Count - 1;
 
             if(ConfigHandler.Config.themeIndex >= ThemeHandler.PresetThemes.Count)
             {
                 var currentTheme = ThemeHandler.GetCurrentTheme();
-                ImGui.InputText("Name", ref currentTheme.name, 32);
+                ImGui.InputText("Name", ref currentTheme.name, 64);
                 if(ImGui.ColorEdit4("Main", ref currentTheme.main)) ThemeHandler.ApplyCurrentTheme();
                 if(ImGui.ColorEdit4("Accent", ref currentTheme.accent)) ThemeHandler.ApplyCurrentTheme();
                 if(ImGui.Checkbox("Use Dark Appearance", ref currentTheme.dark)) ThemeHandler.ApplyCurrentTheme();
@@ -1125,6 +1179,8 @@ public class Editor
                 ImGui.EndDisabled();
             }
 
+            ThemeHandler.ApplyCurrentTheme();
+
             ImGui.SeparatorText("Background");
 
             var bc2v = c2v(ConfigHandler.Config.backColor);
@@ -1139,13 +1195,20 @@ public class Editor
 
             ImGui.SeparatorText("Maximum FPS");
 
+            if(ImGui.Checkbox("Limit FPS to", ref ConfigHandler.Config.limitFPS)) { Raylib.SetTargetFPS(ConfigHandler.Config.limitFPS ? ConfigHandler.Config.maxFPS : int.MaxValue); }
+            ImGui.SameLine();
+
+            if(!ConfigHandler.Config.limitFPS) {ImGui.BeginDisabled();}
+            ImGui.SetNextItemWidth(100);
             if(ImGui.InputInt("FPS", ref ConfigHandler.Config.maxFPS)) { ConfigHandler.Config.maxFPS = Math.Max(10, ConfigHandler.Config.maxFPS); Raylib.SetTargetFPS(ConfigHandler.Config.maxFPS); }
+            if(!ConfigHandler.Config.limitFPS) {ImGui.EndDisabled();}
 
             ImGui.SeparatorText("Other");
 
             ImGui.Checkbox("Show Welcome Screen", ref ConfigHandler.Config.showWelcome);
 
             ImGui.Checkbox("Pin Window Positions", ref ConfigHandler.Config.keepWindowsInPlace);
+            HoverTooltip("Pin Window Manager, Simulation Controls, Save & Load and Grid Controls.");
             
             if(ImGui.Checkbox("Use Multithreading", ref ConfigHandler.Config.useParallel))
             {
@@ -1155,7 +1218,7 @@ public class Editor
 
             ImGui.SeparatorText("Simulations Path");
 
-            WidthX(300, () => ImGui.InputText("##simulationsPath", ref ConfigHandler.Config.simulationsPath, 128));
+            WidthX(300, () => ImGui.InputText("##simulationsPath", ref ConfigHandler.Config.simulationsPath, 512));
             ImGui.SameLine();
             if (ImGui.Button($"{FontAwesome6.Folder}##sim"))
             {
@@ -1234,6 +1297,12 @@ public class Editor
             ImGui.PopID();
         }
         ImGui.End();
+    }
+
+    public void SetCellIndex(int index)
+    {
+        renderer.cellIndex = index;
+        selectorStates["cellPaletteIndex"] = index;
     }
 
     public static Image LoadImage(string fileName)
@@ -1522,6 +1591,8 @@ public class Editor
             0 => "Three Morphogens",
             1 => "Single Morphogen",
             2 => "Cell Types",
+            3 => "Gene Activity",
+            4 => "Gene Condition",
             _ => ""
         };
     }

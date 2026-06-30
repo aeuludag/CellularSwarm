@@ -131,10 +131,51 @@ public class HexRenderer
 
             if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
 
-            var morphoColor = cellTypeColors.GetValueOrDefault(cellPair.Value.cellType.id, Color.Black);
-            Render(x, y, morphoColor, cellPair.Value.spawnedThisFrame ? 0.5f : 1f);
+            var cellColor = cellTypeColors.GetValueOrDefault(cellPair.Value.cellType.id, Color.Black);
+            Render(x, y, cellColor, cellPair.Value.spawnedThisFrame ? 0.5f : 1f);
         }
     }
+
+    public void RenderSimulationGeneActivity(SimulationRenderer simulationRenderer)
+    {
+        Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), camera);
+        Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight()), camera);
+
+        var simulation = simulationRenderer.Simulation;
+
+        foreach (var cellPair in simulation.Cells)
+        {
+            float x = hexSize * cellPair.Key.q * 3 / 2;
+            float y = hexSize * (float)Math.Sqrt(3f) * (cellPair.Key.r + (cellPair.Key.q / 2f));
+            var pos = offset + new Vector2(x, -y);
+
+            if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
+
+            var geneColor = simulation.Genes[simulationRenderer.geneId].ShouldBeActive(cellPair.Value) ? simulationRenderer.activeGeneColor : simulationRenderer.inactiveGeneColor;
+            Render(x, y, geneColor, cellPair.Value.spawnedThisFrame ? 0.5f : 1f);
+        }
+    }
+
+    public void RenderSimulationGeneConditionMet(SimulationRenderer simulationRenderer)
+    {
+        Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), camera);
+        Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight()), camera);
+
+        var simulation = simulationRenderer.Simulation;
+
+        foreach (var cellPair in simulation.Cells)
+        {
+            float x = hexSize * cellPair.Key.q * 3 / 2;
+            float y = hexSize * (float)Math.Sqrt(3f) * (cellPair.Key.r + (cellPair.Key.q / 2f));
+            var pos = offset + new Vector2(x, -y);
+
+            if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
+
+            var geneConditionColor = simulation.GeneConditions[simulationRenderer.geneConditionId].IsMet(cellPair.Value) ? simulationRenderer.metConditionColor : simulationRenderer.notMetConditionColor;
+            Render(x, y, geneConditionColor, cellPair.Value.spawnedThisFrame ? 0.5f : 1f);
+        }
+    }
+
     public void RenderRectangle(HexCoords start, HexCoords end, Color fillColor, Color outlineColor)
     {
         var qDiff = end.q - start.q + 1;

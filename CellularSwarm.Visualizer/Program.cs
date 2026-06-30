@@ -15,15 +15,13 @@ ConfigHandler.LoadConfig();
 int width = ConfigHandler.Config.width;
 int height = ConfigHandler.Config.height;
 
-float scale = 1f;
-
 float hexSize = 50f;
 
 Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
 Raylib.InitWindow(width, height, "Cellular Swarm");
 // Raylib.SetWindowPosition(0, 0);
 Raylib.SetWindowMinSize(800, 400);
-Raylib.SetTargetFPS(ConfigHandler.Config.maxFPS);
+Raylib.SetTargetFPS(ConfigHandler.Config.limitFPS ? ConfigHandler.Config.maxFPS : int.MaxValue);
 Raylib.SetExitKey(KeyboardKey.Null);
 // // Image icon = Raylib.LoadImage("icon.png");
 // Image icon = Raylib.GenImageColor(32, 32, Color.Red);
@@ -163,6 +161,12 @@ while (!Raylib.WindowShouldClose())
         case SimulationRenderer.VisualizationType.CellTypes:
             renderer.RenderSimulationCellTypes(simulationRenderer);
             break;
+        case SimulationRenderer.VisualizationType.GeneActivity:
+            renderer.RenderSimulationGeneActivity(simulationRenderer);
+            break;
+        case SimulationRenderer.VisualizationType.GeneConditionMet:
+            renderer.RenderSimulationGeneConditionMet(simulationRenderer);
+            break;
         default:
             break;
     }
@@ -192,7 +196,7 @@ while (!Raylib.WindowShouldClose())
 
     DrawUI();
 
-    Raylib.DrawText($"Cellular Swarm - v{SimulationRenderer.VERSION} - {RuntimeInformation.OSArchitecture} - {Environment.OSVersion} - {DateTime.Today:d} - {Raylib.GetFPS()} FPS", 5, 5, 15, Color.White);
+    Raylib.DrawText($"Cellular Swarm - v{SimulationRenderer.VERSION} - {RuntimeInformation.OSArchitecture} - {Environment.OSVersion} - {DateTime.Today:d} - {Raylib.GetFPS()} FPS\n{(play ? "Playing..." : "Paused")}", 5, 5, 15, Color.White);
     // Raylib.DrawText($"FPS: {Raylib.GetFPS()}\nW: {Raylib.GetScreenWidth()} H: {Raylib.GetScreenHeight()}", 5, 25, 15, Color.RayWhite);
 
     Raylib.EndDrawing();
@@ -226,7 +230,7 @@ void DrawUI()
     Editor.WinPosC(w - 16, 16, 1, 0);
     Controls();
 
-    Editor.WinPosC(w - 16, 112, 1, 0);
+    Editor.WinPosC(w - 16, 80, 1, 0);
     SaveLoadWindow();
     ImGui.PopStyleVar();
     editor.ShowWindowManager(mouseHex);
@@ -257,6 +261,7 @@ void HandleMouseInput()
 
     SetGridMode();
     SetZoomWithMouse();
+    SetBrushSizeWithMouse();
     if (Raylib.IsMouseButtonDown(MouseButton.Middle)) { MoveCameraWithMouse(); }
 }
 
@@ -275,8 +280,10 @@ void HandleMouseInput()
 
 void SetZoomWithMouse()
 {
+    if (Raylib.IsKeyDown(KeyboardKey.LeftShift)) return;
     float targetZoom = camera.Zoom;
     float scroll = Raylib.GetMouseWheelMove();
+
     if (scroll == 0f) return;
     if (scroll > 0 && targetZoom == camMax) return;
     if (scroll < 0 && targetZoom == camMin) return;
@@ -289,6 +296,17 @@ void SetZoomWithMouse()
     var mousePosAfter = Raylib.GetScreenToWorld2D(Raylib.GetMousePosition(), camera);
 
     camera.Target += mousePosBefore - mousePosAfter;
+}
+
+void SetBrushSizeWithMouse()
+{
+    if(!Raylib.IsKeyDown(KeyboardKey.LeftShift)) return;
+    float scroll = Raylib.GetMouseWheelMove();
+    if (scroll == 0f) return;
+
+    scroll = Math.Clamp(scroll * 0.7f, -1f, +1f);
+    editor.brushSize += (int)Math.Round(scroll);
+    editor.brushSize = Math.Clamp(editor.brushSize, 0, 23);
 }
 
 void MoveCamera()
@@ -316,6 +334,17 @@ void SetZoomWithKeyboard()
 
 void SetGridModeWithKeyboard()
 {
+    if (Raylib.IsKeyDown(KeyboardKey.LeftShift) && editor.gridState != GridState.Inspect)
+    {
+        var number = (int)Raylib.GetKeyPressed() - (int)KeyboardKey.One;
+
+        if(number >= 0 && number <= 8 && simulationRenderer.cellPalette.Count > number)
+        {
+            editor.gridState = GridState.Brush;
+            editor.SetCellIndex(number);
+        }
+        return;
+    }
 
     if (Raylib.IsKeyPressed(KeyboardKey.One)) { editor.gridState = GridState.Move; }
     if (Raylib.IsKeyPressed(KeyboardKey.Two)) { editor.gridState = GridState.Brush; }
@@ -381,7 +410,7 @@ void SetGridMode()
             }
             if (Raylib.IsMouseButtonDown(MouseButton.Right))
             {
-                simulationRenderer.GenerateCellGrid(editor.brushSize, mouseHex, simulationRenderer.EmptyCell);
+                simulationRenderer.RemoveCellGrid(editor.brushSize, mouseHex);
             }
             break;
         case GridState.Erase:
@@ -430,9 +459,6 @@ void Controls()
 {
     if (ImGui.Begin("Simulation Controls", ImGuiWindowFlags.AlwaysAutoResize))
     {
-        ImGui.SetWindowFontScale(scale);
-        ImGui.Text(play ? "Playing..." : "Stopped");
-        ImGui.Separator();
         if (ImGui.Button(play ? IconFonts.FontAwesome6.Pause + " Pause" : IconFonts.FontAwesome6.Play + " Play"))
         {
             play = !play;
@@ -446,13 +472,13 @@ void Controls()
             Step();
         }
         ImGui.SameLine();
-        if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Clear"))
+        if (ImGui.Button(IconFonts.FontAwesome6.TrashCan + " Clear Grid"))
         {
             DebugConsole.Info("Clearing grid.", "RENDERER");
             simulationRenderer.ClearGrid();
         }
         ImGui.SameLine();
-        if (ImGui.Button(IconFonts.FontAwesome6.Repeat + " Reset"))
+        if (ImGui.Button(IconFonts.FontAwesome6.FileCirclePlus + " New Simulation"))
         {
             ResetSimulation();
         }
@@ -501,6 +527,7 @@ void SaveLoadWindow()
         {
             SaveLoadHandler.SaveSimulationToSimulationsFolder(GetSimulation(), simulationRenderer, simulationName);
             SaveLoadHandler.BadLoad = false;
+            SaveLoadHandler.LoadedVersion = Simulation.VERSION;
         }
         Editor.HoverTooltip("Save to Simulations folder");
         ImGui.SameLine();
@@ -517,19 +544,39 @@ void SaveLoadWindow()
             Process.Start(new ProcessStartInfo(fileName: ConfigHandler.Config.simulationsPath) {UseShellExecute = true, Verb = "open"});
         }
         Editor.HoverTooltip("Open Simulations folder");
-        ImGui.SameLine();
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, 0);
-        ImGui.BeginChild("info", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y));
-        // ImGui.Text($"{FontAwesome6.Info}");
-        if (SaveLoadHandler.BadLoad)
+        // ImGui.SameLine();
+        // ImGui.PushStyleColor(ImGuiCol.ChildBg, 0);
+        // ImGui.BeginChild("info", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y));
+        // // ImGui.Text($"{FontAwesome6.Info}");
+        // if (SaveLoadHandler.BadLoad)
+        // {
+        //     ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0f, 0f, 1f));
+        //     ImGui.Text($"Error!");
+        //     ImGui.PopStyleColor();
+        // }
+        // ImGui.EndChild();
+        // ImGui.PopStyleColor();
+        // Editor.HoverTooltip("Or drag & drop a file");
+        ImGui.PushTextWrapPos(248);
+        if (SaveLoadHandler.LastSaveTime != DateTime.MinValue)
         {
-            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0f, 0f, 1f));
-            ImGui.Text($"Error!");
+            var timeWithoutSave = DateTime.Now - SaveLoadHandler.LastSaveTime;
+            ImGui.Text($"Last Save: {(timeWithoutSave.Hours > 0 ? timeWithoutSave.Hours + "h " : "")}{timeWithoutSave.Minutes}m ago");
+        }
+        if (Simulation.VERSION != SaveLoadHandler.LoadedVersion)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, ThemeHandler.GetCurrentTheme().dark ? DebugConsole.Message.WarningColor : new Vector4(0.5f, 0.5f, 0f, 1f));
+            ImGui.Text($"{FontAwesome6.TriangleExclamation} Version Mismatch Warning!\nProgram version: v{Simulation.VERSION}\nFile version: v{SaveLoadHandler.LoadedVersion}.");
             ImGui.PopStyleColor();
         }
-        ImGui.EndChild();
-        ImGui.PopStyleColor();
-        Editor.HoverTooltip("Or drag & drop a file");
+        if (SaveLoadHandler.BadLoad)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, DebugConsole.Message.ErrorColor);
+            ImGui.Text($"{FontAwesome6.TriangleExclamation} Error while loading!\nSee Console ({FontAwesome6.Terminal}) for more info.");
+            ImGui.PopStyleColor();
+        }
+        ImGui.TextDisabled("Load from Simulations folder or Drag & Drop a simulation.");
+        ImGui.PopTextWrapPos();
     }
     ImGui.End();
 }

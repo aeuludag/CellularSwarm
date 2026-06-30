@@ -14,7 +14,19 @@ public class SaveLoadHandler
         get => Instance.badLoad;
         set => Instance.badLoad = value;
     }
+    public static string LoadedVersion
+    {
+        get => Instance.loadedVersion;
+        set => Instance.loadedVersion = value;
+    }
+    public static DateTime LastSaveTime
+    {
+        get => Instance.lastSaveTime;
+        set => Instance.lastSaveTime = value;
+    }
     public bool badLoad;
+    public string loadedVersion = Simulation.VERSION;
+    public DateTime lastSaveTime = DateTime.MinValue;
     public SaveLoadHandler()
     {
         var location = ConfigHandler.Config.simulationsPath;
@@ -53,6 +65,8 @@ public class SaveLoadHandler
 
         File.WriteAllText(path, serializedContainedSimulation);
 
+        Instance.lastSaveTime = DateTime.Now;
+
         // File.WriteAllText(Path.Combine(folder, $"{name}.json"), serializedSimulation);
         // File.WriteAllText(Path.Combine(folder, $"{name}.vis.json"), serializedSimulationRenderer);
 
@@ -61,6 +75,7 @@ public class SaveLoadHandler
     public static SimulationRenderer LoadSimulation(string path)
     {
         DebugConsole.Info($"Loading simulation from path: [{path}]", "IO");
+        Instance.lastSaveTime = DateTime.MinValue;
         try
         {
             var containedSimulationData = ContainedSimulationData.Deserialize(File.ReadAllText(path));
@@ -68,6 +83,8 @@ public class SaveLoadHandler
             var simulationRenderer = VisualizationData.ToSimulationRenderer(containedSimulationData.visualizationData, simulation);
             
             Instance.badLoad = false;
+            Instance.loadedVersion = containedSimulationData.simulationData.version;
+            DebugConsole.Info("Loaded simulation version: " + containedSimulationData.simulationData.version, "SAVELOAD");
             return simulationRenderer;
         }
         catch (Exception e)
@@ -76,6 +93,7 @@ public class SaveLoadHandler
             DebugConsole.Error(e.Message, "IO");
             DebugConsole.Warning("Loading a default simulation.", "IO");
             var simulation = new Simulation(0, "default-error");
+            Instance.loadedVersion = Simulation.VERSION;
             Instance.badLoad = true;
             return new SimulationRenderer(simulation);
         }

@@ -6,7 +6,7 @@ namespace CellularSwarm.Core;
 
 public class Simulation
 {
-    public const string VERSION = "0.1.260113";
+    public const string VERSION = "0.1.260623";
     public int id;
     public string name;
 
@@ -47,7 +47,7 @@ public class Simulation
         DefaultCellTypeCondition = new CellTypeCondition(0, false, DefaultCellType, "New Cell Type Condition");
         DefaultNeighbourCondition = new NeighbourCondition(0, false, 1, GeneCondition.ComparisonType.GreaterThan, "New Neighbour Condition");
         DefaultGeneCondition = DefaultNeighbourCondition.Clone();
-        DefaultGene = new Gene(0, "New Gene", [], [], []);
+        DefaultGene = new Gene(0, "New Gene", false, false, [], [], []);
 
         CellTypes.Add(0, new(DefaultCellType));
         Morphogens.Add(0, new(DefaultMorphogen));

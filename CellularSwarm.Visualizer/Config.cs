@@ -13,10 +13,12 @@ public class Config
     public bool keepWindowsInPlace;
     public int width;
     public int height;
+    public bool limitFPS;
     public int maxFPS;
     public Color backColor;
     public Color outlineColor;
     public List<Theme> customThemes = new();
+
     public Config()
     {
         Reset();
@@ -31,6 +33,7 @@ public class Config
         keepWindowsInPlace = false;
         width = 1080;
         height = 720;
+        limitFPS = true;
         maxFPS = 60;
         backColor = new(20, 20, 20);
         outlineColor = new(30, 30, 30);
