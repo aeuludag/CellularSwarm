@@ -6,7 +6,7 @@ namespace CellularSwarm.Core;
 
 public class Simulation
 {
-    public const string VERSION = "0.1.260623";
+    public const string VERSION = "0.1.260810";
     public int id;
     public string name;
 

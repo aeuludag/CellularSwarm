@@ -46,6 +46,7 @@ public class Gene
     {
         bool conditionsMet;
 
+        if (conditions.Count == 0 && any) { return true; }
         if (conditions.Count == 0) { return false; }
 
         if (any)

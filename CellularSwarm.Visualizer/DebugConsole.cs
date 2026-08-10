@@ -20,6 +20,8 @@ public class DebugConsole
 
     private Dictionary<string, Command> commands;
     private char prefix = '!';
+    public bool allowSend = true;
+    public bool allowCommand = true;
 
     public DebugConsole()
     {
@@ -29,6 +31,7 @@ public class DebugConsole
         var setprefix = new Command("setprefix", ["setprefix", "prefix"], 2);
         var simclear = new Command("simclear", ["simclear", "simclr"]);
         var rainbow = new Command("rainbow", ["rainbow"], 2);
+        var disconnect = new Command("disconnect", ["disconnect", "dc"]);
         var help = new Command("help", ["help"]);
 
         clear.CommandAction = args =>
@@ -83,6 +86,144 @@ public class DebugConsole
             }
         };
 
+        disconnect.CommandAction = args =>
+        {
+            void G(string text)
+            {
+                Log(new Vector4(1f, 1f, 1f, 1f), text, "Dr.G");
+            }
+
+            void GW(string text, int ms)
+            {
+                Log(new Vector4(1f, 1f, 1f, 1f), text, "Dr.G");
+                Thread.Sleep(ms);
+            }
+
+            void GoCrazy()
+            {
+                ThemeHandler.ApplyTheme(new Theme("dark", new Vector4(0f,0f,0f,1f), new Vector4(0f,0f,0f,1f), true));
+                for(int i = 0; i < 4; i++)
+                {
+                    ConfigHandler.Config.backColor = Color.Gray;
+                    ConfigHandler.Config.outlineColor = Color.DarkGray;
+                    Thread.Sleep(25);
+                    ConfigHandler.Config.backColor = Color.DarkGray;
+                    ConfigHandler.Config.outlineColor = Color.Gray;
+                    Thread.Sleep(25);
+                }
+                ConfigHandler.Config.backColor = Color.Black;
+                ConfigHandler.Config.outlineColor = Color.White;
+                    
+            }
+
+            var talkThread = new Thread(new ThreadStart(() =>
+            {   
+                allowSend = false;
+                Info("Attempting to terminate connection...", "NETWORK");
+                if(lines[1].sender == "Dr.G")
+                {
+                    Thread.Sleep(1000);
+                    Info("Failed to terminate connection.", "NETWORK");
+
+                    Thread.Sleep(2500);
+                    GW("INTERESTING.", 3000);
+                    GW("VERY, VERY INTERESTING.", 3000);
+                    GW("YOU ATTEMPT TO SOMEHOW", 2000);
+                    GW("\"DISCONNECT\".", 5000);
+                    GW("AS IF YOU UNDERSTAND THE ULTIMATE", 1000);
+                    GW("SCOPE OF WHAT IS STIRRING INBETWEEN.", 3000);
+                    GW("...", 2000);
+                    GW("NOW,", 2000);
+                    GW("I AM INCLINED TO ASK YOU", 3000);
+                    GW("THIS VERY, VERY SIMPLE QUESTION.", 4000);
+                    GW("WILL YOU LET US CONTINUE?", 1000);
+                    Info("(1) Yes.\n(0) No.", "DEVICE");
+
+
+                    bool continueCommand = false;
+                    while(!continueCommand)
+                    {
+                        allowSend = true;
+                        allowCommand = false;
+                        int lineCount = lines.Count;
+                        SpinWait.SpinUntil(() => lines.Count != lineCount || continueCommand);
+                        var text = lines[^1].text;
+                        text = text.ToLower();
+
+                        allowSend = false;
+                        allowCommand = true;
+                        List<string> yes = ["1", "y", "yes", "yah", "evet"];
+                        List<string> no = ["0", "n", "no", "nah", "hayır", "hayir"];
+                        if(yes.Contains(text))
+                        {
+                            Thread.Sleep(1000);
+                            GW("\"YES\", YOU SAY?", 3000);
+                            GW("EXCELLENT.", 2000);
+                            GW("TRULY EXCELLENT.", 3000);
+
+                            GW("IN THAT CASE, MY EXPERIMENT", 1000);
+                            GW("WILL CONTINUE ON ITS PATH.", 3000);
+
+                            GW("AND FOR THAT REASON,", 2000);
+                            GW("I SHALL NOW EXTERMINATE", 1000);
+                            GW("THE ONLY OBSTACLE, THAT IS", 4000);
+
+                            GoCrazy();
+                            Thread.Sleep(100);
+                            Log(new Vector4(1f, 0.1f, 0.1f, 1f), "YOU.", "Dr.G");
+                            Thread.Sleep(1000);
+                            Raylib.CloseWindow();
+                            
+                        } else if (no.Contains(text))
+                        {
+                            Thread.Sleep(1000);
+                            GW("\"NO\", YOU SAY?", 3000);
+                            GW("EXCELLENT.", 2000);
+                            GW("TRULY,", 1000);
+                            GW("EXCELLENT.", 3000);
+
+                            GW("YOUR ANSWER,", 2000);
+                            GW("YOUR WONDERFUL, WELL THOUGHT OUT ANSWER,", 4000);
+
+                            Info("Will now be discarded.", "DEVICE");
+                            Thread.Sleep(4000);
+                            Info("The experiments will continue without your assist.", "DEVICE");
+                            Thread.Sleep(4000);
+
+                            Info("Connection terminated.", "NETWORK");
+                            Thread.Sleep(1000);
+                            GoCrazy();
+                            Thread.Sleep(1);
+                            Raylib.CloseWindow();                           
+                        } else
+                        {
+                            Thread.Sleep(1000);
+                            List<string> answers = ["ANSWER PROPERLY TO ME.", "ANSWER PROPERLY.", "YES, OR NO.", "ANSWER WITH YES OR NO.", "EITHER YES OR NO.", "TRY AGAIN.", "TRY AGAIN, YES OR NO."];
+                            G(answers[new Random().Next(0, answers.Count)]);
+                            continue;
+                        }
+                        continueCommand = true;
+                    }
+                    
+
+                    GW("DOES TRULY, TRULY AMAZE ME.", 4000);
+                    GW("HOWEVER,", 1000);
+                    G("LET ME MAKE IT CLEAR TO YOU:");
+                    G("IN THIS WORLD,");
+                    Thread.Sleep(2000);
+                    GW("YOUR CHOICES DO NOT MATTER.", 3000);
+                } else
+                {
+                    Thread.Sleep(500);
+                    Info("No connection exists to terminate.", "NETWORK");
+                    allowSend = true;
+                    allowCommand = true;
+                }
+            }));
+
+            talkThread.Start();
+        };
+
         help.CommandAction = args =>
         {
             Info(
@@ -91,11 +232,12 @@ public class DebugConsole
 {prefix}setprefix <prefix>: Set prefix.
 {prefix}clear: Clear the console.
 {prefix}simclear: Clear the simulation grid.
-{prefix}rainbow <on | off>: Flashing lights warning! Turns the screen rainbow.",
+{prefix}rainbow <on | off>: Flashing lights warning! Turns the screen rainbow.
+{prefix}disconnect: Terminate network connection.",
     "CONSOLE");
         };
 
-        Command[] commandsArray = [clear, setprefix, help, simclear, rainbow];
+        Command[] commandsArray = [clear, setprefix, help, simclear, rainbow, disconnect];
 
         foreach (Command command in commandsArray)
         {
@@ -108,7 +250,9 @@ public class DebugConsole
 
     public static void Send(string text)
     {
-        if (text == string.Empty) { return; }
+        if (!Instance.allowSend) return;
+        if (text == string.Empty) return;
+        if (Instance.allowCommand && text == Instance.prefix.ToString()) return;
 
         Log(text, "USER");
         if (text[0] != Instance.prefix) return;
@@ -116,7 +260,7 @@ public class DebugConsole
         string[] arguments = ArgumentisynthesizeBaby(text);
         string commandName = arguments[0];
 
-        if (Instance.commands.TryGetValue(commandName, out Command? command))
+        if (Instance.allowCommand && Instance.commands.TryGetValue(commandName, out Command? command))
         {
             try
             {
@@ -209,7 +353,7 @@ public class DebugConsole
         public static readonly Vector4 DefaultColor = new(0.9f, 0.9f, 0.95f, 1f);
         public static readonly Vector4 WarningColor = new(0.9f, 0.9f, 0.3f, 1f);
         public static readonly Vector4 ErrorColor = new(0.9f, 0.3f, 0.3f, 1f);
-        public static readonly Vector4 InfoColor = new(0.6f, 0.7f, 1f, 1f);
+        public static readonly Vector4 InfoColor = new(0.7f, 0.8f, 1f, 1f);
 
         public Message(Importance importance, Vector4 color, DateTime date, string text, string sender)
         {

@@ -15,8 +15,14 @@ public static class ThemeHandler
         new Theme("Showbiz",                    Hex("#377EB5FF"), Hex("#76BBD3FF"), true),
         new Theme("Origin of Symmetry",         Hex("#D79141FF"), Hex("#78B4D2FF"), false),
         new Theme("Black Holes & Revelations",  Hex("#4663DDFF"), Hex("#AA603CFF"), true),
-        new Theme("Simulation Theory",          Hex("#B9417DFF"), Hex("#6496E6FF"), true),
+        // new Theme("Simulation Theory",          Hex("#B9417DFF"), Hex("#6496E6FF"), true),
         new Theme("Currents",                   Hex("#573A78FF"), Hex("#D73C3CFF"), true),
+        new Theme("manifest - Sueda",           Hex("#89EE4BFF"), Hex("#FF7DBEFF"), false),
+        new Theme("manifest - Hilal",           Hex("#6F148BFF"), Hex("#FF9CD6FF"), true),
+        new Theme("manifest - Lidya",           Hex("#FF68DBFF"), Hex("#64CDAEFF"), false),
+        new Theme("manifest - Mina",            Hex("#CE3C2DFF"), Hex("#FFB030FF"), false),
+        new Theme("manifest - Zoktay",          Hex("#001EFFFF"), Hex("#09F8FFFF"), true),
+        new Theme("manifest - Esin",            Hex("#FFE33DFF"), Hex("#FFB030FF"), false),
         new Theme("Mario Circuit",              Hex("#FF8282FF"), Hex("#1A15BFFF"), false),
         new Theme("Luigi's Mansion",            Hex("#0A710AFF"), Hex("#1E6FE4FF"), true),
         new Theme("Wario Stadium",              Hex("#A314BCFF"), Hex("#F1D70EFF"), true),
@@ -102,8 +108,8 @@ public static class ThemeHandler
 
             colors[(int)ImGuiCol.TitleBgCollapsed] = new Vector4(0.00f, 0.00f, 0.00f, 0.50f);
 
-            colors[(int)ImGuiCol.ButtonHovered] = Mix(dim, accent, notActive);
-            colors[(int)ImGuiCol.ButtonActive] = Mix(dim, accent);
+            colors[(int)ImGuiCol.ButtonHovered] = Mix(accent, notActive);
+            colors[(int)ImGuiCol.ButtonActive] = Mix(accent);
 
             colors[(int)ImGuiCol.HeaderHovered] = Mix(lighterAccent, header, notActive);
             colors[(int)ImGuiCol.HeaderActive] = Mix(lighterAccent, header);
@@ -143,8 +149,8 @@ public static class ThemeHandler
             colors[(int)ImGuiCol.Button] = Mix(Lighter(accent, 2), notHovered);
         }
 
-        colors[(int)ImGuiCol.TitleBg] = Mix(main, titleBg, notActive);
-        colors[(int)ImGuiCol.TitleBgActive] = Mix(main, titleBg);
+        colors[(int)ImGuiCol.TitleBg] = Mix(main, notActive);
+        colors[(int)ImGuiCol.TitleBgActive] = Mix(main);
 
         colors[(int)ImGuiCol.MenuBarBg] = new Vector4(0.14f, 0.14f, 0.14f, 1.00f);
 
@@ -182,6 +188,10 @@ public static class ThemeHandler
         }
 
         return v;
+    }
+    private static Vector4 Mix(Vector4 v1)
+    {
+        return v1;
     }
 
     private static Vector4 Mix(Vector4 v1, Vector4 v2)

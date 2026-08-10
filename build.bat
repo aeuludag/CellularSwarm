@@ -1,7 +1,5 @@
 echo "BUILDING START :)"
 
-set -e
-
 echo "Building for Mac (arm)"
 dotnet publish CellularSwarm.Visualizer/CellularSwarm.Visualizer.csproj -c Release -r osx-arm64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:DebugType=None /p:EnableCompressionInSingleFile=true
 echo "Building for Mac (Intel)"

@@ -1,10 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>icon.ico</ApplicationIcon> 
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,4 +20,68 @@
   <ItemGroup>
     <ProjectReference Include="..\CellularSwarm.Core\CellularSwarm.Core.csproj" />
   </ItemGroup>
+
+  <!-- BEGIN Gemini Generated Btw -->
+  <!-- Fully Automated macOS Bundler with App Icon Generation -->
+  <Target Name="CreateMacAppBundle" AfterTargets="Publish" Condition="$(RuntimeIdentifier.StartsWith('osx-'))">
+    <PropertyGroup>
+      <AppBundleDir>$(PublishDir)CellularSwarm.Visualizer.app</AppBundleDir>
+      <ContentsDir>$(AppBundleDir)/Contents</ContentsDir>
+      <MacOSDir>$(ContentsDir)/MacOS</MacOSDir>
+      <ResourcesDir>$(ContentsDir)/Resources</ResourcesDir>
+      <IconsetDir>$(PublishDir)AppIcon.iconset</IconsetDir>
+    </PropertyGroup>
+
+    <Message Importance="High" Text="Automating App Icon (.icns) generation..." />
+
+    <!-- 1. Build the temporary .iconset structure -->
+    <MakeDir Directories="$(IconsetDir)" />
+
+    <!-- 2. Generate the mandatory multi-resolution icon layers using native sips scaling -->
+    <Exec Command="sips -z 16 16     icon.png --out &quot;$(IconsetDir)/icon_16x16.png&quot;" />
+    <Exec Command="sips -z 32 32     icon.png --out &quot;$(IconsetDir)/icon_16x16@2x.png&quot;" />
+    <Exec Command="sips -z 32 32     icon.png --out &quot;$(IconsetDir)/icon_32x32.png&quot;" />
+    <Exec Command="sips -z 64 64     icon.png --out &quot;$(IconsetDir)/icon_32x32@2x.png&quot;" />
+    <Exec Command="sips -z 128 128   icon.png --out &quot;$(IconsetDir)/icon_128x128.png&quot;" />
+    <Exec Command="sips -z 256 256   icon.png --out &quot;$(IconsetDir)/icon_128x128@2x.png&quot;" />
+    <Exec Command="sips -z 256 256   icon.png --out &quot;$(IconsetDir)/icon_256x256.png&quot;" />
+    <Exec Command="sips -z 512 512   icon.png --out &quot;$(IconsetDir)/icon_256x256@2x.png&quot;" />
+    <Exec Command="sips -z 512 512   icon.png --out &quot;$(IconsetDir)/icon_512x512.png&quot;" />
+    <Exec Command="sips -z 1024 1024 icon.png --out &quot;$(IconsetDir)/icon_512x512@2x.png&quot;" />
+
+    <!-- 3. Compile the folder into a production .icns container -->
+    <MakeDir Directories="$(ResourcesDir)" />
+    <Exec Command="iconutil -c icns &quot;$(IconsetDir)&quot; -o &quot;$(ResourcesDir)/AppIcon.icns&quot;" />
+
+    <!-- 4. Cleanup temporary iconset build files -->
+    <RemoveDir Directories="$(IconsetDir)" />
+
+    <Message Importance="High" Text="Building final macOS .app bundle paths..." />
+
+    <!-- 5. Create core binary directories -->
+    <MakeDir Directories="$(MacOSDir)" />
+
+    <!-- 6. Collect ALL publish items (.dylib, .pdb, and the main binary) -->
+    <ItemGroup>
+      <PublishFiles Include="$(PublishDir)*" Exclude="$(PublishDir)*.app/**" />
+    </ItemGroup>
+
+    <!-- 7. Move everything into the internal MacOS folder -->
+    <Move SourceFiles="@(PublishFiles)" DestinationFolder="$(MacOSDir)" />
+
+    <!-- 8. Copy the Info.plist into Contents -->
+    <Copy SourceFiles="Info.plist" DestinationFolder="$(ContentsDir)" />
+
+    <!-- 9. Fix executable permissions for the binary and dylibs -->
+    <Exec Command="chmod +x &quot;$(MacOSDir)/$(AssemblyName)&quot;" />
+    <Exec Command="chmod +x &quot;$(MacOSDir)/&quot;*.dylib" ContinueOnError="true" />
+
+    <!-- 10. Clear quarantine flags and deep-sign natively -->
+    <Exec Command="xattr -cr &quot;$(AppBundleDir)&quot;" />
+    <Exec Command="codesign --force --deep --sign - &quot;$(AppBundleDir)&quot;" />
+
+    <Message Importance="High" Text="Successfully created bundle with custom branding at: $(AppBundleDir)" />
+  </Target>
+  <!-- END Gemini Generated Btw -->
+
 </Project>

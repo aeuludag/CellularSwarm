@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>CellularSwarm.Visualizer</string>
+
+    <key>CFBundleIdentifier</key>
+    <string>com.aeuludag.cellularswarm</string>
+
+    <key>CFBundleName</key>
+    <string>Cellular Swarm</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    
+    <key>CFBundleIconFile</key>
+    <string>AppIcon.icns</string>
+    
+    <!-- File Type Associations -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Cellular Swarm Simulation</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Owner</string>
+            <key>LSTypeIsPackage</key>
+            <false/>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.aeuludag.cellularsimulation</string>
+            </array>
+        </dict>
+    </array>
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>Cellular Swarm Simulation File</string>
+            <key>UTTypeIdentifier</key>
+            <string>com.aeuludag.cellularsimulation</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>csim</string> 
+                </array>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>
