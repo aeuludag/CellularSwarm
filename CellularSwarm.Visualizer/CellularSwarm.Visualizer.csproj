@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>icon.ico</ApplicationIcon> 
+    <AssemblyName>CellularSwarm.Visualizer</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +16,8 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
     <EmbeddedResource Include="icon.png" />
     <EmbeddedResource Include="icon_nobg.png" />
+    <EmbeddedResource Include="ChivoMono-Medium.ttf" />
+    <EmbeddedResource Include="fa-solid-900.ttf" />
   </ItemGroup>
 
   <ItemGroup>

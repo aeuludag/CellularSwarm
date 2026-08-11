@@ -34,6 +34,17 @@ public class Editor
     public HexCoords selectedCellCoords = new(int.MaxValue, int.MaxValue);
 
     public static readonly List<Texture2D> LoadedTextures = new();
+    public static readonly Dictionary<FontMode, float> FontModeSizes = new()
+    {
+        {FontMode.Small, 12.0f},
+        {FontMode.Normal, 14.0f},
+        {FontMode.Large, 16.0f},
+    };
+    public static float FontSize = 16.0f;
+
+    public static ImFontPtr RegularFont;
+    public static ImFontPtr HeaderFont;
+    public static ImFontPtr ConsoleFont;
 
     public static readonly Vector4 RED_WARNING = new(0.9f, 0f, 0f, 1f);
     public static readonly Vector4 RED_LIGHT = new(1f, 0.7f, 0.7f, 1f);
@@ -75,19 +86,19 @@ public class Editor
         {
 
             ImGui.Checkbox("Visualization Editor", ref showVisualizationEditor);
-            HoverTooltip("Set visualization modes", "Visualization Mode, ...");
+            HoverTooltip("Set visualization modes", $"{FontAwesome6.CircleInfo} Visualization Mode, ...");
             ImGui.Checkbox("Morphogen Editor", ref showMorphogenEditor);
-            HoverTooltip("Create or edit morphogens", "Name, Diffusion Factor, Decay Factor");
+            HoverTooltip("Create or edit morphogens", $"{FontAwesome6.CircleInfo} Name, Diffusion Factor, Decay Factor");
             ImGui.Checkbox("Cell Type Editor", ref showCellTypeEditor);
-            HoverTooltip("Create or edit cell types", "Name");
+            HoverTooltip("Create or edit cell types", $"{FontAwesome6.CircleInfo} Name");
             ImGui.Checkbox("Gene Action Editor", ref showGeneActionEditor);
-            HoverTooltip("Create or edit gene actions", "Name, Action Type, ...");
+            HoverTooltip("Create or edit gene actions", $"{FontAwesome6.CircleInfo} Name, Action Type, ...");
             ImGui.Checkbox("Gene Condition Editor", ref showGeneConditionEditor);
-            HoverTooltip("Create or edit gene conditions", "Name, Negate, ...");
+            HoverTooltip("Create or edit gene conditions", $"{FontAwesome6.CircleInfo} Name, Negate, ...");
             ImGui.Checkbox("Gene Editor", ref showGeneEditor);
-            HoverTooltip("Create or edit genes", "Name, Activator/Inhibitor Conditions, Actions");
+            HoverTooltip("Create or edit genes", $"{FontAwesome6.CircleInfo} Name, Activator/Inhibitor Conditions, Actions");
             ImGui.Checkbox("Simulation Editor", ref showSimulationEditor);
-            HoverTooltip("Edit simulation properties", "Name, Diffusion Threshold, Diffusion Factor, Diffusion Steps");
+            HoverTooltip("Edit simulation properties", $"{FontAwesome6.CircleInfo} Name, Diffusion Threshold, Diffusion Factor, Diffusion Steps");
 
             if (ImGui.Button("Hide All"))
             {
@@ -341,23 +352,37 @@ public class Editor
                 case GeneAction.ActionType.ChangeMorphogen:
                     ImGui.SeparatorText("Morphogen Delta");
                     DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, -max, max);
+                    foreach (var morphogenId in geneAction.actionMorphogens.Keys)
+                    {
+                        geneAction.actionMorphogens[morphogenId] = Math.Clamp(geneAction.actionMorphogens[morphogenId], -100f, 100f);
+                    }
                     break;
                 case GeneAction.ActionType.Multiply:
                     ImGui.SeparatorText("Morphogen Share Rate");
                     HoverTooltip("0.0 : leave all to the parent\n0.5 : share equally (default)\n1.0 : give all to the daughter");
                     DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name);
+                    foreach (var morphogenId in geneAction.actionMorphogens.Keys)
+                    {
+                        geneAction.actionMorphogens[morphogenId] = Math.Clamp(geneAction.actionMorphogens[morphogenId], 0f, 1f);
+                    }
                     break;
                 case GeneAction.ActionType.Apoptosis:
                     // DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name);
+                    geneAction.actionMorphogens.Clear();
                     break;
                 case GeneAction.ActionType.ChangeCellType:
                     cellTypeId = Selector($"cellType", $"Cell Type", simulation.CellTypes.Keys.ToList(), (id) => simulation.CellTypes[id].name, cellTypeId);
                     geneAction.cellTypeId = cellTypeId;
+                    geneAction.actionMorphogens.Clear();
                     break;
                 case GeneAction.ActionType.TransportMorphogen:
                     ImGui.SeparatorText("Active Transportation");
                     HoverTooltip("-1.0 : pull all of morphogen\n 0.0 : no transportation (default)\n+1.0 : push all of morphogen");
                     DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, min: -1, max: +1);
+                    foreach (var morphogenId in geneAction.actionMorphogens.Keys)
+                    {
+                        geneAction.actionMorphogens[morphogenId] = Math.Clamp(geneAction.actionMorphogens[morphogenId], -1f, 1f);
+                    }
                     break;
             }
 
@@ -440,18 +465,18 @@ public class Editor
                     ImGui.TableNextRow();
 
                     ImGui.TableSetColumnIndex(0);
-                    ImGui.PushItemWidth(150);
+                    ImGui.PushItemWidth(220);
                     morphogenId = Selector($"morphogenSelector", $"##Morphogen", simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, morphogenId);
                     ImGui.PopItemWidth();
 
                     ImGui.TableSetColumnIndex(1);
-                    ImGui.PushItemWidth(150);
+                    ImGui.PushItemWidth(170);
                     comparisonType = (GeneCondition.ComparisonType)Selector($"comparisonTypeSelector", $"##Comparison Type",
                     [0, 1, 2], (id) => ComparisonTypeToString((GeneCondition.ComparisonType)id), (int)comparisonType);
                     ImGui.PopItemWidth();
 
                     ImGui.TableSetColumnIndex(2);
-                    WidthX(150, () => { if(ImGui.SliderFloat($"Threshold##ThresholdSlider", ref thresholdConcentration, 0f, simulation.maxConcentration)) {thresholdConcentration = Math.Clamp(thresholdConcentration, 0f, simulation.maxConcentration); } });
+                    WidthX(200, () => { if(ImGui.SliderFloat($"Threshold##ThresholdSlider", ref thresholdConcentration, 0f, simulation.maxConcentration)) {thresholdConcentration = Math.Clamp(thresholdConcentration, 0f, simulation.maxConcentration); } });
                     // ImGui.SameLine();
                     // WidthX(ImGui.CalcTextSize($"{simulation.maxConcentration:F3}").X + 20, () => { if (ImGui.InputFloat($"##ThresholdInput", ref thresholdConcentration)) { thresholdConcentration = Math.Clamp(thresholdConcentration, 0f, simulation.maxConcentration); } });
                 }
@@ -470,7 +495,7 @@ public class Editor
                 )}";
 
                 ImGui.Separator();
-                ImGui.PushTextWrapPos(450);
+                ImGui.PushTextWrapPos(600);
                 ImGui.Text($"\"{inEnglish}\"");
                 ImGui.PopTextWrapPos();
 
@@ -489,7 +514,7 @@ public class Editor
                 cellTypeCondition.cellType = cellType;
 
                 ImGui.Separator();
-                ImGui.PushTextWrapPos(200);
+                ImGui.PushTextWrapPos(350);
                 ImGui.Text($"\"Is cell type{(not ? " not " : " ")}{cellType.name}?\"");
                 ImGui.PopTextWrapPos();
             }
@@ -503,18 +528,18 @@ public class Editor
                     ImGui.TableNextRow();
 
                     ImGui.TableSetColumnIndex(0);
-                    ImGui.PushItemWidth(150);
+                    ImGui.PushItemWidth(200);
                     ImGui.Text("Neighbour Count");
                     ImGui.PopItemWidth();
 
                     ImGui.TableSetColumnIndex(1);
-                    ImGui.PushItemWidth(150);
+                    ImGui.PushItemWidth(170);
                     comparisonType = (GeneCondition.ComparisonType)Selector($"comparisonTypeSelector", $"##Comparison Type",
                     [0, 1, 2], (id) => ComparisonTypeToString((GeneCondition.ComparisonType)id), (int)comparisonType);
                     ImGui.PopItemWidth();
 
                     ImGui.TableSetColumnIndex(2);
-                    ImGui.PushItemWidth(100);
+                    ImGui.PushItemWidth(150);
                     if(ImGui.SliderInt("##Neighbour Count", ref threshold, 0, 6)) { threshold = Math.Clamp(threshold, 0, 6); };
                     ImGui.PopItemWidth();
                 }
@@ -531,7 +556,7 @@ public class Editor
                 )}";
 
                 ImGui.Separator();
-                ImGui.PushTextWrapPos(400);
+                ImGui.PushTextWrapPos(600);
                 ImGui.Text($"\"{inEnglish}\"");
                 ImGui.PopTextWrapPos();
             }
@@ -702,15 +727,18 @@ public class Editor
 
             ImGui.Text($"{cell.cellType.name}");
 
-            ImGui.SeparatorText("Morphogens");
-
-            foreach (var morphogenPair in cell.Morphogens)
+            if(!ImGui.IsKeyDown(ImGuiKey.LeftShift))
             {
-                ImGui.PushID($"morphogen{morphogenPair.Key}");
-                int morphogenId = morphogenPair.Key;
-                var morphogenAmount = morphogenPair.Value;
-                ImGui.Text($"{simulation.GetMorphogen(morphogenId).name} : {morphogenAmount:F2}");
-                ImGui.PopID();
+                ImGui.SeparatorText("Morphogens");
+
+                foreach (var morphogenPair in cell.Morphogens)
+                {
+                    ImGui.PushID($"morphogen{morphogenPair.Key}");
+                    int morphogenId = morphogenPair.Key;
+                    var morphogenAmount = morphogenPair.Value;
+                    ImGui.Text($"{simulation.GetMorphogen(morphogenId).name} : {morphogenAmount:F2}");
+                    ImGui.PopID();
+                }
             }
 
             ImGui.SeparatorText("Genes");
@@ -1013,7 +1041,6 @@ public class Editor
         DebugConsole.Instance.Renderer = renderer;
         
         var key = "console";
-
         // ImGui.SetNextWindowSize(new Vector2(0, 500));
         if (ImGui.Begin("Console"))
         {
@@ -1021,11 +1048,11 @@ public class Editor
 
             CloseButton(ref showConsole);
             ImGui.SameLine();
-            ImGui.PushItemWidth(ImGui.GetWindowWidth() - 120);
+            ImGui.PushItemWidth(ImGui.GetWindowWidth() - 160);
             ImGui.InputText("##input", ref consoleText, 256);
             ImGui.SameLine();
 
-            if (ImGui.Button("Send") || (ImGui.IsWindowFocused() && ImGui.IsKeyPressed(ImGuiKey.Enter)))
+            if (ImGui.Button($"{FontAwesome6.PaperPlane} Send") || (ImGui.IsWindowFocused() && ImGui.IsKeyPressed(ImGuiKey.Enter)))
             {
                 DebugConsole.Send(consoleText);
                 consoleText = "";
@@ -1059,6 +1086,7 @@ public class Editor
             // }
 
             // (partially) GEMINI GENERATED CODE BELOW
+            ImGui.PushFont(Editor.ConsoleFont);
             ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0f, 0f, 0f, 1f));
             if (ImGui.BeginChild("messages", new Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
             {
@@ -1097,6 +1125,7 @@ public class Editor
                 }
             }
             ImGui.PopStyleColor();
+            ImGui.PopFont();
             // GEMINI GENERATED CODE ABOVE
             ImGui.EndChild();
 
@@ -1124,7 +1153,7 @@ public class Editor
 
             CloseButton(ref showSettings);
             ImGui.SameLine();
-            if(ImGui.Button("Reset Settings"))
+            if(ImGui.Button($"{FontAwesome6.ArrowRotateRight} Reset Settings"))
             {
                 ConfigHandler.ResetConfig();
                 ConfigHandler.SaveConfig();
@@ -1139,6 +1168,16 @@ public class Editor
 
             ImGui.Separator();
             ImGui.SeparatorText("UI");
+
+            int fontMode = (int)ConfigHandler.Config.fontMode;
+            WidthX(FS(12), () =>
+            {    
+                ConfigHandler.Config.fontMode = (FontMode)Selector("fontMode", "Font Size", [0,1,2], (i)=>{
+                string[] l = [$"Small  ({FontModeSizes[FontMode.Small]}px)", $"Normal ({FontModeSizes[FontMode.Normal]}px)", $"Large  ({FontModeSizes[FontMode.Large]}px)"]; return l[i];},fontMode);
+            });
+            HoverTooltip("(requires restart to apply changes)");
+
+            ImGui.Separator();
 
             int currentThemeIndex = ConfigHandler.Config.themeIndex;
 
@@ -1208,9 +1247,9 @@ public class Editor
 
             ImGui.SeparatorText("Background");
 
-            if(ImGui.Button("Reset to Dark")) { ConfigHandler.Config.backColor = new(20, 20, 20); ConfigHandler.Config.outlineColor = new(255, 255, 255, 20); }
+            if(ImGui.Button($"{FontAwesome6.Moon} Reset to Dark")) { ConfigHandler.Config.backColor = new(20, 20, 20); ConfigHandler.Config.outlineColor = new(255, 255, 255, 20); }
             ImGui.SameLine();
-            if(ImGui.Button("Reset to Light")) { ConfigHandler.Config.backColor = new(230, 230, 240); ConfigHandler.Config.outlineColor = new(10, 10, 40, 20); }
+            if(ImGui.Button($"{FontAwesome6.Sun} Reset to Light")) { ConfigHandler.Config.backColor = new(230, 230, 240); ConfigHandler.Config.outlineColor = new(10, 10, 40, 20); }
 
             var bc2v = c2v(ConfigHandler.Config.backColor);
             var oc2v = c2v(ConfigHandler.Config.outlineColor);
@@ -1254,7 +1293,7 @@ public class Editor
             
             ImGui.SeparatorText("Simulations Path");
 
-            WidthX(300, () => ImGui.InputText("##simulationsPath", ref ConfigHandler.Config.simulationsPath, 512));
+            WidthX(ImGui.GetContentRegionAvail().X - FS(2, 4), () => ImGui.InputText("##simulationsPath", ref ConfigHandler.Config.simulationsPath, 512));
             ImGui.SameLine();
             if (ImGui.Button($"{FontAwesome6.Folder}##sim"))
             {
@@ -1274,7 +1313,7 @@ public class Editor
     {
         var key = "welcome";
 
-        var width = 2 * ImGui.CalcTextSize("Welcome to Cellular Swarm!").X + 8 + 96;
+        var width = 2 * ImGui.CalcTextSize("Welcome to Cellular Swarm!").X + 12 + 96;
 
         if(ImGui.Begin("Welcome", ImGuiWindowFlags.AlwaysAutoResize))
         {
@@ -1293,11 +1332,12 @@ public class Editor
             ImGui.SameLine();
             ImGui.PushStyleColor(ImGuiCol.ChildBg, Vector4.Zero);
             ImGui.BeginChild("##title", new Vector2(width - 100, 96));
-            ImGui.SetWindowFontScale(2);
-            ImGui.Dummy(new Vector2(0, 16));
+            // ImGui.Dummy(new Vector2(0, 16));
+            ImGui.PushFont(HeaderFont);
             ImGui.Text($"Welcome to Cellular Swarm!");
-            ImGui.SetWindowFontScale(1);
-            ImGui.Text($"v{SimulationRenderer.VERSION} - Last Updated 10th Aug 2026");
+            ImGui.PopFont();
+            ImGui.Text($"by Ahmet Emir Uludağ {FontAwesome6.FaceSmile}");
+            ImGui.TextDisabled($"Core v{Simulation.VERSION} - App v{SimulationRenderer.VERSION}\nLast updated 11th Aug 2026");
             ImGui.EndChild();
             ImGui.PopStyleColor();
 
@@ -1327,7 +1367,7 @@ public class Editor
             ImGui.SameLine();
             ImGui.TextLinkOpenURL("Source Code", "https://github.com/aeuludag/CellularSwarm");
 
-            ImGui.TextDisabled("Made with Raylib, ImGui and love <3.");
+            ImGui.TextDisabled($"{FontAwesome6.Heart} Made with Raylib, ImGui and love <3.");
 
             ImGui.PopTextWrapPos();
             ImGui.PopID();
@@ -1355,9 +1395,7 @@ public class Editor
         {
             ImGui.PushID(key);
 
-            ImGui.Text($"Cellular Swarm");
-            ImGui.SameLine();
-            ImGui.Text($"v{SimulationRenderer.VERSION} - {Environment.OSVersion} {RuntimeInformation.OSArchitecture} - {DateTime.Today:d}{(ConfigHandler.Config.showFPSinInfo ? $" - {Raylib.GetFPS()} FPS" : "")}");
+            ImGui.Text($"{FontAwesome6.Dna} Cellular Swarm | App v{SimulationRenderer.VERSION} | {Environment.OSVersion} {RuntimeInformation.OSArchitecture} | {DateTime.Today:d}{(ConfigHandler.Config.showFPSinInfo ? $" | {Raylib.GetFPS()} FPS" : "")}");
 
             ImGui.PopID();
         }
@@ -1669,12 +1707,12 @@ public class Editor
         Raylib.SetWindowTitle($"\"{simulationName}\" - Cellular Swarm");
     }
 
-    void Space(int space = 5)
+    public static void Space(int space = 5)
     {
         ImGui.Dummy(new Vector2(0, space));
     }
 
-    void WrappingText(string text)
+    public static void WrappingText(string text)
     {
         ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
         ImGui.TextUnformatted(text);
@@ -1697,7 +1735,7 @@ public class Editor
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.5f, 0f, 0f, 1f));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.5f, 0f, 0f, 1f));
         ImGui.PushStyleColor(ImGuiCol.Text, Vector4.One);
-        if (ImGui.Button($"Close"))
+        if (ImGui.Button($"{FontAwesome6.Xmark} Close"))
         {
             toFalse = false;
         }
@@ -1752,11 +1790,23 @@ public class Editor
         ImGui.SetNextWindowPos(new Vector2(x, y), ConfigHandler.Config.keepWindowsInPlace ? ImGuiCond.Always : ImGuiCond.Once, new Vector2(px, py));
     }
 
+    public static float FS(float factor, float c = 0)
+    {
+        return FontSize * factor + c;
+    }
+
     public enum GridState
     {
         Move,
         Brush,
         Erase,
         Inspect
+    }
+
+        public enum FontMode
+    {
+        Small,
+        Normal,
+        Large,
     }
 }

@@ -10,6 +10,7 @@ using CellularSwarm.Visualizer;
 using static CellularSwarm.Visualizer.Editor;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using System.Reflection;
 
 if (new Random().Next(0, 10) == 6)
 {
@@ -75,22 +76,76 @@ var editor = new Editor(simulationRenderer);
 var camMin = 0.01f;
 var camMax = 2f;
 
+Editor.FontSize = Editor.FontModeSizes[ConfigHandler.Config.fontMode];
+
 rlImGui.Setup(true);
 
-// byte[] iniNameBuffer = System.Text.Encoding.ASCII.GetBytes("custom_layout.ini\0");
+// vvvvvvvv GEMINI GENERATED BTW vvvvvvvv
 unsafe
 {
-    // if (ConfigHandler.Config.rememberWindows)
-    // {
-    //     fixed (byte* p = iniNameBuffer)
-    //     {
-    //         ImGui.GetIO().NativePtr->IniFilename = p;
-    //     }
-    // }
-    // else
-    // {
-        ImGui.GetIO().NativePtr->IniFilename = null;
-    // }
+    var fontSize = Editor.FontSize;
+
+    byte[] GetEmbeddedResourceBytes(string resourceName)
+    {
+        Assembly assembly = Assembly.GetExecutingAssembly();
+
+        string fullResourceName = System.Array.Find(
+            assembly.GetManifestResourceNames(), 
+            name => name.EndsWith(resourceName, System.StringComparison.OrdinalIgnoreCase)
+        ) ?? resourceName;
+
+        using Stream stream = assembly.GetManifestResourceStream(fullResourceName) 
+            ?? throw new FileNotFoundException($"Embedded resource '{resourceName}' not found.");
+
+        byte[] buffer = new byte[stream.Length];
+        stream.ReadExactly(buffer, 0, buffer.Length);
+        return buffer;
+    }
+
+    ImGuiIOPtr io = ImGui.GetIO();
+    io.NativePtr->IniFilename = null;
+
+    io.Fonts.Clear();
+    Editor.ConsoleFont = io.Fonts.AddFontDefault();
+
+    byte[] textFontData = GetEmbeddedResourceBytes("ChivoMono-Medium.ttf");
+    byte[] iconFontData = GetEmbeddedResourceBytes("fa-solid-900.ttf");
+
+    ushort[] latinRanges = new ushort[] { 0x0020, 0x00FF, 0x0100, 0x017F, 0 };
+    ushort[] iconRanges = new ushort[] { 0xE000, 0xF8FF, 0 };
+
+    ImFontConfig* config = ImGuiNative.ImFontConfig_ImFontConfig();
+    config->FontDataOwnedByAtlas = 0; 
+
+    fixed (byte* pTextFont = textFontData)
+    fixed (byte* pIconFont = iconFontData)
+    fixed (ushort* pLatinRanges = latinRanges)
+    fixed (ushort* pIconRanges = iconRanges)
+    {
+        // --- A. REGULAR FONT ---
+        config->MergeMode = 0;
+        // Pass pLatinRanges here so 'ğ', 'ş', etc. are baked into the atlas
+        Editor.RegularFont = io.Fonts.AddFontFromMemoryTTF((IntPtr)pTextFont, textFontData.Length, fontSize, config, (IntPtr)pLatinRanges);
+
+        // Merge Icons
+        config->MergeMode = 1;
+        config->PixelSnapH = 1;
+        io.Fonts.AddFontFromMemoryTTF((IntPtr)pIconFont, iconFontData.Length, fontSize, config, (IntPtr)pIconRanges);
+
+        // --- B. HEADER FONT ---
+        config->MergeMode = 0;
+        Editor.HeaderFont = io.Fonts.AddFontFromMemoryTTF((IntPtr)pTextFont, textFontData.Length, 2 * fontSize, config, (IntPtr)pLatinRanges);
+
+        // Merge Icons
+        config->MergeMode = 1;
+        config->PixelSnapH = 1;
+        io.Fonts.AddFontFromMemoryTTF((IntPtr)pIconFont, iconFontData.Length, 2 * fontSize, config, (IntPtr)pIconRanges);
+    }
+
+    ImGuiNative.ImFontConfig_destroy(config);
+
+    io.NativePtr->FontDefault = Editor.RegularFont;
+    rlImGui.ReloadFonts();
 }
 
 ThemeHandler.ApplyMorph();
@@ -121,7 +176,7 @@ if(commandlineArgs.Length != 1)
 
     simulationRenderer = SaveLoadHandler.LoadSimulation(path);
     editor.renderer = simulationRenderer;
-    SetTitle(simulationName);
+    SetTitle(simulationRenderer.Simulation.name);
 }
 
 DebugConsole.Info("Starting program loop.", "RENDERER");
@@ -495,7 +550,7 @@ void Controls()
             DebugConsole.Info("Clearing grid.", "RENDERER");
             simulationRenderer.ClearGrid();
         }
-        HoverTooltip("Clear simulation grid");
+        HoverTooltip("Clear simulation grid", "C", true);
         ImGui.SameLine();
         if (ImGui.Button(IconFonts.FontAwesome6.FileCirclePlus + " New Simulation"))
         {
@@ -520,7 +575,7 @@ void SaveLoadWindow()
 
             simulationRenderer = SaveLoadHandler.LoadSimulation(filePath);
             editor.renderer = simulationRenderer;
-            SetTitle(simulationName);
+            SetTitle(simulationRenderer.Simulation.name);
         }
         Raylib.UnloadDroppedFiles(droppedFiles);
     }
@@ -558,7 +613,7 @@ void SaveLoadWindow()
         {
             simulationRenderer = SaveLoadHandler.LoadSimulationFromSimulationsFolder(simulationName);
             editor.renderer = simulationRenderer;
-            SetTitle(simulationName);
+            SetTitle(simulationRenderer.Simulation.name);
         }
         HoverTooltip("Load from Simulations folder");
 
@@ -569,7 +624,7 @@ void SaveLoadWindow()
         }
         HoverTooltip("Open Simulations folder");
 
-        ImGui.PushTextWrapPos(248);
+        ImGui.PushTextWrapPos(270);
         if (SaveLoadHandler.LastSaveTime != DateTime.MinValue)
         {
             var timeWithoutSave = DateTime.Now - SaveLoadHandler.LastSaveTime;
@@ -619,5 +674,5 @@ void ResetSimulation()
     simulationRenderer = new(new(DateTime.Now.Millisecond, $"new-{DateTime.Now:fffffff}"));
     editor.renderer = simulationRenderer;
     simulationRenderer.SetParallel();
-    SetTitle(simulationName);
+    SetTitle(simulationRenderer.Simulation.name);
 }

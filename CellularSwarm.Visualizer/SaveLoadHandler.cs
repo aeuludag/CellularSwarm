@@ -74,7 +74,7 @@ public class SaveLoadHandler
     }
     public static SimulationRenderer LoadSimulation(string path)
     {
-        DebugConsole.Info($"Loading simulation from path: [{path}]", "IO");
+        DebugConsole.Info($"Loading simulation from path: [{path}]", "SAVELOAD");
         Instance.lastSaveTime = DateTime.MinValue;
         try
         {
@@ -89,9 +89,9 @@ public class SaveLoadHandler
         }
         catch (Exception e)
         {
-            DebugConsole.Error($"Error while loading simulation from [{path}].", "IO");
-            DebugConsole.Error(e.Message, "IO");
-            DebugConsole.Warning("Loading a default simulation.", "IO");
+            DebugConsole.Error($"Error while loading simulation from [{path}].", "SAVELOAD");
+            DebugConsole.Error(e.Message, "SAVELOAD");
+            DebugConsole.Warning("Loading a default simulation.", "SAVELOAD");
             var simulation = new Simulation(0, "default-error");
             Instance.loadedVersion = Simulation.VERSION;
             Instance.badLoad = true;
