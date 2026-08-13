@@ -52,7 +52,7 @@ public class Editor
     public static readonly Vector4 GREEN_LIGHT = new(0.7f, 1f, 0.7f, 1f);
     public static readonly Vector4 GREEN_DARK = new(0.1f, 0.5f, 0.1f, 1f);
     public static readonly Vector4 BLUE_LIGHT = new(0.7f, 0.7f, 1f, 1f);
-    public static readonly Vector4 BLUE_DARK = new(0.3f, 0f, 0f, 1f);
+    public static readonly Vector4 BLUE_DARK = new(0f, 0f, 0.3f, 1f);
     public static readonly Vector4 PURPLE_LIGHT = new(0.7f, 0.4f, 0.8f, 1f);
     public static readonly Vector4 PURPLE_DARK = new(0.3f, 0.2f, 0.5f, 1f);
 
@@ -63,6 +63,7 @@ public class Editor
     private string consoleText = "";
     private Texture2D icon;
     private Texture2D iconNoBg;
+    public static int Fun;
 
     public Editor(SimulationRenderer renderer)
     {
@@ -1210,6 +1211,7 @@ public class Editor
                 {
                     ConfigHandler.Config.customThemes.RemoveAt(currentThemeIndex - ThemeHandler.PresetThemes.Count);
                     currentThemeIndex = Math.Max(0, currentThemeIndex - 1);
+                    ThemeHandler.ApplyTheme(ThemeHandler.Themes[currentThemeIndex]);
                 }
             });
 
@@ -1218,6 +1220,7 @@ public class Editor
             // ConfigHandler.Config.themeIndex = currentThemeIndex;
 
             ConfigHandler.Config.themeIndex = Selector($"themeSelector{key}", "Theme", range, getName, currentThemeIndex);
+            if(currentThemeIndex != ConfigHandler.Config.themeIndex) ThemeHandler.ApplyCurrentTheme();
             
             if(uselessBoolThatIndicatesNewThemeWasJustRecentlyAddedRightNow)
                 ConfigHandler.Config.themeIndex = ThemeHandler.Themes.Count - 1;
@@ -1235,6 +1238,15 @@ public class Editor
                 var currentTheme = ThemeHandler.GetCurrentTheme();
                 var main = currentTheme.main;
                 var accent = currentTheme.accent;
+                var dark = currentTheme.dark;
+                // Dictionary<string, (Vector4 col, string name, string msg)> manifam = new()
+                // {
+                //     {"manifest - Sueda", (new(0.2f, 1f, 0.2f, 1f), "SUEDA", "Normale gçre hayat biraz hızlı gidiyo~")},
+                //     {"manifest - Hilal", (new(0.5f, 0.1f, 1f, 1f), "HILAL", "Yess, okayy...")},
+                //     {"manifest - Lidya", (new(1f, 0.2f, 1f, 1f), "LIDYA", "Bakıyosun niye çok toz pembe (puf) hislerle?")},
+                //     {"manifest - Mina", (new(1f, 0.2f, 0.2f, 1f), "MINA", "Üşüyünce anılarıma sarılıp uyursun...")},
+                // };
+                // if(manifam.TryGetValue(currentTheme.name, out var fam)) DebugConsole.Log(fam.col, fam.msg, fam.name);
                 // var dark = currentTheme.dark;
                 ImGui.BeginDisabled();
                 ImGui.ColorEdit4("Main", ref main);
@@ -1276,7 +1288,7 @@ public class Editor
             ImGui.Checkbox("Show Welcome Screen", ref ConfigHandler.Config.showWelcome);
 
             ImGui.Checkbox("Pin Window Positions", ref ConfigHandler.Config.keepWindowsInPlace);
-            HoverTooltip("Pin Window Manager, Info, Simulation Controls, Save & Load and Grid Controls");
+            HoverTooltip("Pin Window Manager, Simulation Controls, Save & Load and Grid Controls");
 
             if(ImGui.Checkbox("Use Multithreading", ref ConfigHandler.Config.useParallel))
             {
@@ -1321,6 +1333,37 @@ public class Editor
             ImGui.PushTextWrapPos(width);
 
             CloseButton(ref showWelcome);
+
+            ImGui.SameLine();
+
+            switch (UpdateChecker.CurrentStatus)
+            {
+                case UpdateChecker.CheckStatus.NotChecked:
+                    if(ImGui.Button($"{FontAwesome6.ArrowRotateRight} Check for Updates"))
+                    {
+                        _ = UpdateChecker.CheckForUpdatesAsync();
+                    }
+                break;
+                case UpdateChecker.CheckStatus.Checking:
+                    ImGui.Text($"{FontAwesome6.Spinner} Checking{new string('.', (int)Math.Floor((2 * (1000f * DateTime.Now.Second + DateTime.Now.Millisecond) / 1000f) % 3) + 1)}");
+                break;
+                case UpdateChecker.CheckStatus.Checked:
+                    if(UpdateChecker.Version == SimulationRenderer.VERSION)
+                    {
+                        ImGui.TextColored(ThemeHandler.GetCurrentTheme().dark ? GREEN_LIGHT : GREEN_DARK, $"{FontAwesome6.Check} You are up to date.");
+                    } else
+                    {
+                        ImGui.TextColored(ThemeHandler.GetCurrentTheme().dark ? BLUE_LIGHT : BLUE_DARK, $"{FontAwesome6.CircleInfo} Update Available!");
+                        HoverTooltip($"New Version:     v{UpdateChecker.Version}\nCurrent Version: v{SimulationRenderer.VERSION}");
+                        // ImGui.SameLine();
+                        // ImGui.TextLinkOpenURL($"{FontAwesome6.UpRightFromSquare}", "https://aeuludag.itch.io/cellular-swarm/");
+                    }
+                break;
+                case UpdateChecker.CheckStatus.Error:
+                    ImGui.TextColored(RED_WARNING, $"{FontAwesome6.TriangleExclamation} Error! See Console ({FontAwesome6.Terminal})");
+                break;
+            }
+
             ImGui.SameLine();
             var dontShowAgain = !ConfigHandler.Config.showWelcome;
             ImGui.Checkbox("Don't Show Again", ref dontShowAgain);
@@ -1395,7 +1438,12 @@ public class Editor
         {
             ImGui.PushID(key);
 
-            ImGui.Text($"{FontAwesome6.Dna} Cellular Swarm | App v{SimulationRenderer.VERSION} | {Environment.OSVersion} {RuntimeInformation.OSArchitecture} | {DateTime.Today:d}{(ConfigHandler.Config.showFPSinInfo ? $" | {Raylib.GetFPS()} FPS" : "")}");
+            Dictionary<int, string> symbols = new() {{6, FontAwesome6.HouseSignal}, {11, FontAwesome6.Egg}};
+            // var c = Raylib.ColorFromHSV( 360f * (float)Fun * 9f / 10f, 0.1f, 1f);
+            var c = symbols.ContainsKey(Fun) ? Raylib.ColorFromHSV( 1f/2f * 360 * ((float)(1000f * (DateTime.Now.Second % 2)) + (float)DateTime.Now.Millisecond) / 1000f, 0.25f, 1f) : Color.White;
+            ImGui.TextColored(new Vector4(c.R / 255f, c.G / 255f, c.B / 255f, 0.8f), symbols.GetValueOrDefault(Fun, FontAwesome6.Dna));
+            ImGui.SameLine();
+            ImGui.Text($"Cellular Swarm | App v{SimulationRenderer.VERSION} | {Environment.OSVersion} {RuntimeInformation.OSArchitecture} | {DateTime.Today:d}{(ConfigHandler.Config.showFPSinInfo ? $" | {Raylib.GetFPS()} FPS" : "")}");
 
             ImGui.PopID();
         }
@@ -1413,7 +1461,7 @@ public class Editor
     public static Image LoadImage(string fileName)
     // help by gpt!
     {
-        DebugConsole.Info($"Loading image [{fileName}].", "EDITOR");
+        DebugConsole.Info($"Loading image [{fileName}]...", "EDITOR");
         byte[] imageBytes;
         using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"CellularSwarm.Visualizer.{fileName}"))
         {

@@ -12,14 +12,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Reflection;
 
-if (new Random().Next(0, 10) == 6)
-{
-    DebugConsole.Info("Connection established.", "NETWORK");
-    DebugConsole.Log(new Vector4(1f, 1f, 1f, 1f), "ARE YOU THERE?", "Dr.G");
-    DebugConsole.Log(new Vector4(1f, 1f, 1f, 1f), "ARE WE CONNECTED?", "Dr.G");
-    DebugConsole.Log(new Vector4(1f, 1f, 1f, 1f), "EXCELLENT. TRULY EXCELLENT.", "Dr.G");
-    DebugConsole.Log(new Vector4(1f, 1f, 1f, 1f), "WE MAY BEGIN.", "Dr.G");
-}
+Fun = new Random().Next(0, 12); // 0-11
 
 ConfigHandler.LoadConfig();
 
@@ -80,9 +73,9 @@ Editor.FontSize = Editor.FontModeSizes[ConfigHandler.Config.fontMode];
 
 rlImGui.Setup(true);
 
-// vvvvvvvv GEMINI GENERATED BTW vvvvvvvv
 unsafe
 {
+    // vvvvvvvv GEMINI GENERATED BTW vvvvvvvv
     var fontSize = Editor.FontSize;
 
     byte[] GetEmbeddedResourceBytes(string resourceName)
@@ -177,6 +170,15 @@ if(commandlineArgs.Length != 1)
     simulationRenderer = SaveLoadHandler.LoadSimulation(path);
     editor.renderer = simulationRenderer;
     SetTitle(simulationRenderer.Simulation.name);
+}
+
+if (Fun == 6)
+{
+    DebugConsole.Info("Connection established.", "NETWORK");
+    DebugConsole.Log(new Vector4(1f, 1f, 1f, 1f), "ARE YOU THERE?", "Dr.G");
+    DebugConsole.Log(new Vector4(1f, 1f, 1f, 1f), "ARE WE CONNECTED?", "Dr.G");
+    DebugConsole.Log(new Vector4(1f, 1f, 1f, 1f), "EXCELLENT. TRULY EXCELLENT.", "Dr.G");
+    DebugConsole.Log(new Vector4(1f, 1f, 1f, 1f), "WE MAY BEGIN.", "Dr.G");
 }
 
 DebugConsole.Info("Starting program loop.", "RENDERER");

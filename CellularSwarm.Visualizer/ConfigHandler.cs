@@ -63,7 +63,7 @@ public class ConfigHandler
         {
             DebugConsole.Error($"Error while loading config.", "CONFIG");
             DebugConsole.Error(e.Message, "CONFIG");
-            DebugConsole.Warning("Loading default config.", "CONFIG");
+            DebugConsole.Warning("Loading default config...", "CONFIG");
             Instance.config = new Config();
         }
     }

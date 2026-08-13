@@ -32,6 +32,7 @@ public class DebugConsole
         var simclear = new Command("simclear", ["simclear", "simclr"]);
         var rainbow = new Command("rainbow", ["rainbow"], 2);
         var disconnect = new Command("disconnect", ["disconnect", "dc"]);
+        var egg = new Command("egg", ["egg"]);
         var help = new Command("help", ["help"]);
 
         clear.CommandAction = args =>
@@ -120,7 +121,7 @@ public class DebugConsole
             {   
                 allowSend = false;
                 Info("Attempting to terminate connection...", "NETWORK");
-                if(lines[1].sender == "Dr.G")
+                if(Editor.Fun == 6)
                 {
                     Thread.Sleep(1000);
                     Info("Failed to terminate connection.", "NETWORK");
@@ -137,7 +138,7 @@ public class DebugConsole
                     GW("I AM INCLINED TO ASK YOU", 3000);
                     GW("THIS VERY, VERY SIMPLE QUESTION.", 4000);
                     GW("WILL YOU LET US CONTINUE?", 1000);
-                    Info("(1) Yes.\n(0) No.", "DEVICE");
+                    Info("(y) Yes.\n(n) No.", "DEVICE");
 
 
                     bool continueCommand = false;
@@ -152,8 +153,8 @@ public class DebugConsole
 
                         allowSend = false;
                         allowCommand = true;
-                        List<string> yes = ["1", "y", "yes", "yah", "evet"];
-                        List<string> no = ["0", "n", "no", "nah", "hayır", "hayir"];
+                        List<string> yes = ["y", "ye", "yes", "yah", "evet"];
+                        List<string> no = ["n", "no", "nah", "hayır", "hayir"];
                         if(yes.Contains(text))
                         {
                             Thread.Sleep(1000);
@@ -223,6 +224,94 @@ public class DebugConsole
 
             talkThread.Start();
         };
+        
+        egg.CommandAction = args =>
+        {
+            void M(string text, int waitMs)
+            {
+                Info(text, "TREE");
+                Thread.Sleep(waitMs);
+            }
+
+            var talkThread = new Thread(new ThreadStart(() =>
+            {   
+                allowSend = false;
+                if(Editor.Fun == 11)
+                {
+                    Thread.Sleep(1000);
+                    M($"(Well, there is a man here.)", 2000);
+                    M($"(He offered you something.)", 1000);
+
+                    Info("(y) Yes.\n(n) No.", "DEVICE");
+
+                    bool continueCommand = false;
+                    while(!continueCommand)
+                    {
+                        allowSend = true;
+                        allowCommand = false;
+                        int lineCount = lines.Count;
+                        SpinWait.SpinUntil(() => lines.Count != lineCount || continueCommand);
+                        var text = lines[^1].text;
+                        text = text.ToLower();
+
+                        allowSend = false;
+                        allowCommand = true;
+                        List<string> yes = ["y", "ye", "yes", "yah", "evet"];
+                        // List<string> no = ["n", "no", "nah", "hayır", "hayir"];
+                        if(yes.Contains(text))
+                        {
+                            Thread.Sleep(1000);
+                            M($"(You tried to receive an Egg.)", 2000);
+                            M($"(However, the man realised that he", 1000);
+                            M($"cannot possibly transfer it from there.)", 4000);
+                            M($"(Despite that, the man seemed proud and", 1000);
+                            M($"happy that he has at least been noticed.)", 4000);
+                            M($"(The man nodded his head across time and", 1000);
+                            M($"space, or so you had thought.)", 4000);
+                            M($"(And as for you, only you seem to be aware", 1000);
+                            M($"of how you are supposed to feel after this", 1000);
+                            M($"weird, intriguing interaction.)", 7000);
+                            while(Instance.lines[^1].text != $"{prefix}egg")
+                            {
+                                Instance.lines.RemoveAt(Instance.lines.Count - 1);
+                                Thread.Sleep(50);
+                            }
+                            Instance.lines.RemoveAt(Instance.lines.Count - 1);
+                            Warning("Issue forgotten.", "NETWORK");
+                            Editor.Fun = 0;
+                            Thread.Sleep(2000);
+                            Instance.lines[^1].text = "Connection terminated.";
+                            continueCommand = true;
+                            allowSend = true;
+                            allowCommand = true;
+                        } else
+                        {
+                            Thread.Sleep(1000);
+                            M($"(Then he needn't be here.)", 2000);
+                            while(Instance.lines[^1].text != $"{prefix}egg")
+                            {
+                                Instance.lines.RemoveAt(Instance.lines.Count - 1);
+                                Thread.Sleep(100);
+                            }
+                            Instance.lines.RemoveAt(Instance.lines.Count - 1);
+                            Editor.Fun = 0;
+                            continueCommand = true;
+                            allowSend = true;
+                            allowCommand = true;
+                        }
+                    }
+                    
+                } else
+                {
+                    Thread.Sleep(1000);
+                    M($"(Well, there is not a man here.)", 0);
+                    allowSend = true;
+                    allowCommand = true;
+                }
+            }));
+
+            talkThread.Start();
+        };
 
         help.CommandAction = args =>
         {
@@ -233,11 +322,12 @@ public class DebugConsole
 {prefix}clear: Clear the console.
 {prefix}simclear: Clear the simulation grid.
 {prefix}rainbow <on | off>: Flashing lights warning! Turns the screen rainbow.
-{prefix}disconnect: Terminate network connection.",
+{prefix}disconnect: Terminate network connection.
+{prefix}egg: Egg.",
     "CONSOLE");
         };
 
-        Command[] commandsArray = [clear, setprefix, help, simclear, rainbow, disconnect];
+        Command[] commandsArray = [clear, setprefix, help, simclear, rainbow, disconnect, egg];
 
         foreach (Command command in commandsArray)
         {

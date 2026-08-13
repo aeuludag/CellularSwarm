@@ -91,7 +91,7 @@ public class SaveLoadHandler
         {
             DebugConsole.Error($"Error while loading simulation from [{path}].", "SAVELOAD");
             DebugConsole.Error(e.Message, "SAVELOAD");
-            DebugConsole.Warning("Loading a default simulation.", "SAVELOAD");
+            DebugConsole.Warning("Loading a default simulation...", "SAVELOAD");
             var simulation = new Simulation(0, "default-error");
             Instance.loadedVersion = Simulation.VERSION;
             Instance.badLoad = true;
