@@ -6,8 +6,8 @@ using Raylib_cs;
 
 public class SimulationRenderer
 {
-    public const string VERSION = "0.1.260813";
-    public const string RENDERER = "Default Limon Renderer";
+    public const string VERSION = "0.1.260819";
+    public const string NAME = "Default Limon Renderer";
     public Simulation Simulation { get => _simulation; set => _simulation = value; }
     public VisualizationType visualizationType = VisualizationType.ThreeMorphogens;
 
@@ -229,6 +229,44 @@ public class SimulationRenderer
         }
 
         Simulation.Cells.Remove(coords);
+    }
+
+    public void DetachMorphogen(int morphogenId)
+    {
+        foreach((Cell cell, var _) in cellPalette)
+        {
+            cell.Morphogens.Remove(morphogenId);
+        }
+
+        var defaultMorphogen = Simulation.Morphogens.Keys.ToList()[0];
+        
+        redMorphogenId = redMorphogenId == morphogenId ? defaultMorphogen : redMorphogenId;
+        blueMorphogenId = blueMorphogenId == morphogenId ? defaultMorphogen : blueMorphogenId;
+        greenMorphogenId = greenMorphogenId == morphogenId ? defaultMorphogen : greenMorphogenId;
+
+        singleMorphogenId = singleMorphogenId == morphogenId ? defaultMorphogen : singleMorphogenId;
+
+
+    }
+    
+    public void DetachCellType(int cellTypeId)
+    {
+        foreach((Cell cell, var _) in cellPalette)
+        {
+            if(cell.cellType.id == cellTypeId) cell.cellType = cell.simulation.CellTypes.Values.ToList()[0];
+        }
+
+        cellTypeColors.Remove(cellTypeId);
+    }
+
+    public void DetachGeneCondition(int geneConditionId)
+    {
+        this.geneConditionId = this.geneConditionId == geneConditionId ? Simulation.GeneConditions.Keys.ToList()[0] : geneConditionId;
+    }
+
+    public void DetachGene(int geneId)
+    {
+        this.geneId = this.geneId == geneId ? Simulation.Genes.Keys.ToList()[0] : geneId;
     }
 
     public void ClearGrid()

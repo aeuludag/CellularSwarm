@@ -637,12 +637,25 @@ void SaveLoadWindow()
             {
                 ImGui.Text($"Last Save: {(timeWithoutSave.Hours > 0 ? timeWithoutSave.Hours + "h " : "")}{timeWithoutSave.Minutes}m ago");
             }
+            Editor.HoverTooltip($"Last saved at {SaveLoadHandler.LastSaveTime:t}");
         }
-        if (Simulation.VERSION != SaveLoadHandler.LoadedVersion)
+
+        bool coreMatch = Simulation.VERSION == SaveLoadHandler.LoadedCoreVersion;
+        bool rendererVersionMatch = SimulationRenderer.VERSION == SaveLoadHandler.LoadedRendererVersion;
+        bool rendererNameMatch = SimulationRenderer.NAME == SaveLoadHandler.LoadedRendererName;
+        if (!coreMatch || !rendererVersionMatch || !rendererNameMatch)
         {
+            List<string> mismatchStrings = new();
             ImGui.PushStyleColor(ImGuiCol.Text, ThemeHandler.GetCurrentTheme().dark ? DebugConsole.Message.WarningColor : new Vector4(0.5f, 0.5f, 0f, 1f));
-            ImGui.Text($"{FontAwesome6.TriangleExclamation} Version Mismatch Warning!\nProgram version: v{Simulation.VERSION}\nFile version: v{SaveLoadHandler.LoadedVersion}.");
+            ImGui.Text($"{FontAwesome6.TriangleExclamation} Version mismatch warning!");
             ImGui.PopStyleColor();
+            if(!coreMatch) 
+                mismatchStrings.Add($"Program Core: v{Simulation.VERSION}\nFile Core: v{SaveLoadHandler.LoadedCoreVersion}");
+            if(!rendererNameMatch)
+                mismatchStrings.Add($"Program Renderer: {SimulationRenderer.NAME}\nFile Renderer: {SaveLoadHandler.LoadedRendererName}");
+            if(!rendererVersionMatch && rendererNameMatch)
+                mismatchStrings.Add($"Program Renderer: v{SimulationRenderer.VERSION}\nFile Renderer: v{SaveLoadHandler.LoadedRendererVersion}");
+            HoverTooltip(string.Join('\n', mismatchStrings));
         }
         if (SaveLoadHandler.BadLoad)
         {
@@ -667,7 +680,7 @@ void SaveSimulation()
 {
     SaveLoadHandler.SaveSimulationToSimulationsFolder(GetSimulation(), simulationRenderer, simulationName);
     SaveLoadHandler.BadLoad = false;
-    SaveLoadHandler.LoadedVersion = Simulation.VERSION;
+    SaveLoadHandler.LoadedCoreVersion = Simulation.VERSION;
 }
 
 void ResetSimulation()

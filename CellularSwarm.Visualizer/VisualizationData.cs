@@ -7,6 +7,8 @@ namespace CellularSwarm.Visualizer;
 
 public class VisualizationData
 {
+    public string version = SimulationRenderer.VERSION;
+    public string renderer = SimulationRenderer.NAME;
     public int visualizationType = 0;
     public Dictionary<int, Color> cellTypeColors = new();
     public List<(CellData cell, string name)> cellPalette = new();

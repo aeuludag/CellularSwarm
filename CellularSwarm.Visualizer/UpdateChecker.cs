@@ -11,7 +11,7 @@ public class UpdateChecker
     public static string? Version => version;
     private static readonly HttpClient client = new HttpClient();
     private static string? version = null;
-    private static readonly string url = "http://localhost:5173/cellular-swarm.version";
+    private static readonly string url = "http://aeuludag.github.io/cellular-swarm.version";
 
     public static async Task CheckForUpdatesAsync()
     {

@@ -14,19 +14,31 @@ public class SaveLoadHandler
         get => Instance.badLoad;
         set => Instance.badLoad = value;
     }
-    public static string LoadedVersion
+    public static string LoadedCoreVersion
     {
-        get => Instance.loadedVersion;
-        set => Instance.loadedVersion = value;
+        get => Instance.loadedCoreVersion;
+        set => Instance.loadedCoreVersion = value;
+    }
+    public static string LoadedRendererVersion
+    {
+        get => Instance.loadedRendererVersion;
+        set => Instance.loadedRendererVersion = value;
+    }
+    public static string LoadedRendererName
+    {
+        get => Instance.loadedRendererName;
+        set => Instance.loadedRendererName = value;
     }
     public static DateTime LastSaveTime
     {
         get => Instance.lastSaveTime;
         set => Instance.lastSaveTime = value;
     }
-    public bool badLoad;
-    public string loadedVersion = Simulation.VERSION;
-    public DateTime lastSaveTime = DateTime.MinValue;
+    private bool badLoad;
+    private string loadedCoreVersion = Simulation.VERSION;
+    private string loadedRendererVersion = SimulationRenderer.VERSION;
+    private string loadedRendererName = SimulationRenderer.NAME;
+    private DateTime lastSaveTime = DateTime.MinValue;
     public SaveLoadHandler()
     {
         var location = ConfigHandler.Config.simulationsPath;
@@ -74,17 +86,24 @@ public class SaveLoadHandler
     }
     public static SimulationRenderer LoadSimulation(string path)
     {
-        DebugConsole.Info($"Loading simulation from path: [{path}]", "SAVELOAD");
+        DebugConsole.Info($"Loading simulation from path [{path}].", "SAVELOAD");
         Instance.lastSaveTime = DateTime.MinValue;
         try
         {
             var containedSimulationData = ContainedSimulationData.Deserialize(File.ReadAllText(path));
+
+            DebugConsole.Info($"Loaded simulation version [{containedSimulationData.simulationData.version}].", "SAVELOAD");
+            DebugConsole.Info($"Loaded renderer [{containedSimulationData.visualizationData.renderer}].", "SAVELOAD");
+            DebugConsole.Info($"Loaded renderer version [{containedSimulationData.visualizationData.version}].", "SAVELOAD");
+
             var simulation = SimulationData.ToSimulation(containedSimulationData.simulationData);
             var simulationRenderer = VisualizationData.ToSimulationRenderer(containedSimulationData.visualizationData, simulation);
             
+            Instance.loadedCoreVersion = containedSimulationData.simulationData.version;
+            Instance.loadedRendererVersion = containedSimulationData.visualizationData.version;
+            Instance.loadedRendererName = containedSimulationData.visualizationData.renderer;
             Instance.badLoad = false;
-            Instance.loadedVersion = containedSimulationData.simulationData.version;
-            DebugConsole.Info("Loaded simulation version: " + containedSimulationData.simulationData.version, "SAVELOAD");
+
             return simulationRenderer;
         }
         catch (Exception e)
@@ -93,7 +112,7 @@ public class SaveLoadHandler
             DebugConsole.Error(e.Message, "SAVELOAD");
             DebugConsole.Warning("Loading a default simulation...", "SAVELOAD");
             var simulation = new Simulation(0, "default-error");
-            Instance.loadedVersion = Simulation.VERSION;
+            Instance.loadedCoreVersion = Simulation.VERSION;
             Instance.badLoad = true;
             return new SimulationRenderer(simulation);
         }

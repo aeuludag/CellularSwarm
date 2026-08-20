@@ -91,4 +91,6 @@ I wanted to work on this project after seeing [this video](https://youtu.be/nLu4
 
 Hope you like it!!! I would greatly appreciate feedbacks on how to improve.
 
+Licensed under GPLv3 (see LICENSE.).
+
 -Emir

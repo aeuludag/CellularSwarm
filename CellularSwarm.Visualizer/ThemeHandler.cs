@@ -65,6 +65,7 @@ public static class ThemeHandler
 
     private static void ApplyCustom(Vector4 main, Vector4 accent, bool dark)
     {
+        DebugConsole.Info($"Applying custom theme...", "THEME");
         var style = ImGui.GetStyle();
         var colors = style.Colors;
 

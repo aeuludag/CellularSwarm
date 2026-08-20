@@ -26,8 +26,9 @@ public class ConfigHandler
         }
         else
         {
-            DebugConsole.Warning("Path does not exist. Trying to create one.", "CONFIG");
+            DebugConsole.Warning("Path does not exist. Creating one...", "CONFIG");
             Directory.CreateDirectory(location);
+            Editor.Fun = 0; // well, there needn't be a man here when you first open it.
         }
     }
 

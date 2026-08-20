@@ -208,7 +208,7 @@ public class Editor
                 }
             }
 
-            RemoveArea(cellTypes, cellTypeId, referencedInConditions.Count > 0 || referencedInActions.Count > 0, "Type");
+            RemoveArea(cellTypes, cellTypeId, referencedInConditions.Count > 0 || referencedInActions.Count > 0, "Type", renderer.DetachCellType);
 
             InfoHeader(() =>
             {
@@ -290,7 +290,7 @@ public class Editor
             }
 
             ImGui.Separator();
-            RemoveArea(morphogens, morphogenId, referencedInConditions.Count > 0 || referencedInActions.Count > 0, "Morphogen");
+            RemoveArea(morphogens, morphogenId, referencedInConditions.Count > 0 || referencedInActions.Count > 0, "Morphogen", renderer.DetachMorphogen);
 
             InfoHeader(() =>
             {
@@ -457,31 +457,12 @@ public class Editor
                 var comparisonType = concentrationCondition.comparisonType;
                 var morphogenId = concentrationCondition.morphogenId;
                 var thresholdConcentration = concentrationCondition.thresholdConcentration;
-                if (ImGui.BeginTable("##concentrationTable", 3))
-                {
-                    // ImGui.TableSetupColumn("Morphogen");
-                    // ImGui.TableSetupColumn("Comparison");
-                    // ImGui.TableSetupColumn("Threshold");
-                    // ImGui.TableHeadersRow();
-                    ImGui.TableNextRow();
 
-                    ImGui.TableSetColumnIndex(0);
-                    ImGui.PushItemWidth(220);
-                    morphogenId = Selector($"morphogenSelector", $"##Morphogen", simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, morphogenId);
-                    ImGui.PopItemWidth();
+                morphogenId = Selector($"morphogenSelector", $"Morphogen##Morphogen", simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, morphogenId);
 
-                    ImGui.TableSetColumnIndex(1);
-                    ImGui.PushItemWidth(170);
-                    comparisonType = (GeneCondition.ComparisonType)Selector($"comparisonTypeSelector", $"##Comparison Type",
-                    [0, 1, 2], (id) => ComparisonTypeToString((GeneCondition.ComparisonType)id), (int)comparisonType);
-                    ImGui.PopItemWidth();
-
-                    ImGui.TableSetColumnIndex(2);
-                    WidthX(200, () => { if(ImGui.SliderFloat($"Threshold##ThresholdSlider", ref thresholdConcentration, 0f, simulation.maxConcentration)) {thresholdConcentration = Math.Clamp(thresholdConcentration, 0f, simulation.maxConcentration); } });
-                    // ImGui.SameLine();
-                    // WidthX(ImGui.CalcTextSize($"{simulation.maxConcentration:F3}").X + 20, () => { if (ImGui.InputFloat($"##ThresholdInput", ref thresholdConcentration)) { thresholdConcentration = Math.Clamp(thresholdConcentration, 0f, simulation.maxConcentration); } });
-                }
-                ImGui.EndTable();
+                comparisonType = (GeneCondition.ComparisonType)Selector($"comparisonTypeSelector", $"Comparison Type##Comparison Type",
+                [0, 1, 2], (id) => ComparisonTypeToString((GeneCondition.ComparisonType)id), (int)comparisonType);
+                if(ImGui.SliderFloat($"Threshold##ThresholdSlider", ref thresholdConcentration, 0f, simulation.maxConcentration)) thresholdConcentration = Math.Clamp(thresholdConcentration, 0f, simulation.maxConcentration);
 
                 concentrationCondition.name = name;
                 concentrationCondition.not = not;
@@ -496,9 +477,7 @@ public class Editor
                 )}";
 
                 ImGui.Separator();
-                ImGui.PushTextWrapPos(600);
-                ImGui.Text($"\"{inEnglish}\"");
-                ImGui.PopTextWrapPos();
+                WrappingText($"\"{inEnglish}\"");
 
             }
             else if (geneCondition is CellTypeCondition cellTypeCondition)
@@ -570,7 +549,7 @@ public class Editor
             }
 
             ImGui.Separator();
-            RemoveArea(geneConditions, geneConditionId, referencedInGenes.Count > 0, "Condition");
+            RemoveArea(geneConditions, geneConditionId, referencedInGenes.Count > 0, "Condition", renderer.DetachGeneCondition);
 
             InfoHeader(() =>
             {
@@ -645,7 +624,7 @@ public class Editor
             ImGui.PopStyleColor();
 
             ImGui.Separator();
-            RemoveArea(genes, geneId, false, "Gene");
+            RemoveArea(genes, geneId, false, "Gene", renderer.DetachGene);
 
             InfoHeader(() =>
             {
@@ -726,7 +705,7 @@ public class Editor
 
             ImGui.SeparatorText("Cell Type");
 
-            ImGui.Text($"{cell.cellType.name}");
+            ImGui.Text($"{simulation.CellTypes[cell.cellType.id].name}");
 
             if(!ImGui.IsKeyDown(ImGuiKey.LeftShift))
             {
@@ -811,6 +790,7 @@ public class Editor
             {
                 renderer.cellPalette.Add((new(cell), "New Cell"));
             }
+            HoverTooltip($"Add the cell to {FontAwesome6.Pen} Brush.");
             ImGui.Separator();
 
             ImGui.Text($"Cell Coordinates: {coords}");
@@ -1184,6 +1164,7 @@ public class Editor
 
             float rand() => (float)random.Next() / (float)int.MaxValue;
             bool uselessBoolThatIndicatesNewThemeWasJustRecentlyAddedRightNow = false;
+            bool uselessBoolThatIndicatesOneThemeWasJustRecentlyRemovedRightNow = false;
             if(ImGui.Button("New"))
             {
                 ConfigHandler.Config.customThemes.Add(
@@ -1211,7 +1192,7 @@ public class Editor
                 {
                     ConfigHandler.Config.customThemes.RemoveAt(currentThemeIndex - ThemeHandler.PresetThemes.Count);
                     currentThemeIndex = Math.Max(0, currentThemeIndex - 1);
-                    ThemeHandler.ApplyTheme(ThemeHandler.Themes[currentThemeIndex]);
+                    uselessBoolThatIndicatesOneThemeWasJustRecentlyRemovedRightNow = true;
                 }
             });
 
@@ -1220,10 +1201,14 @@ public class Editor
             // ConfigHandler.Config.themeIndex = currentThemeIndex;
 
             ConfigHandler.Config.themeIndex = Selector($"themeSelector{key}", "Theme", range, getName, currentThemeIndex);
-            if(currentThemeIndex != ConfigHandler.Config.themeIndex) ThemeHandler.ApplyCurrentTheme();
-            
+
             if(uselessBoolThatIndicatesNewThemeWasJustRecentlyAddedRightNow)
                 ConfigHandler.Config.themeIndex = ThemeHandler.Themes.Count - 1;
+            
+            if(uselessBoolThatIndicatesOneThemeWasJustRecentlyRemovedRightNow ||
+            uselessBoolThatIndicatesNewThemeWasJustRecentlyAddedRightNow ||
+            currentThemeIndex != ConfigHandler.Config.themeIndex)
+                ThemeHandler.ApplyCurrentTheme(); // HİLKAT GARİBESİ
 
             if(ConfigHandler.Config.themeIndex >= ThemeHandler.PresetThemes.Count)
             {
@@ -1239,15 +1224,28 @@ public class Editor
                 var main = currentTheme.main;
                 var accent = currentTheme.accent;
                 var dark = currentTheme.dark;
-                // Dictionary<string, (Vector4 col, string name, string msg)> manifam = new()
-                // {
-                //     {"manifest - Sueda", (new(0.2f, 1f, 0.2f, 1f), "SUEDA", "Normale gçre hayat biraz hızlı gidiyo~")},
-                //     {"manifest - Hilal", (new(0.5f, 0.1f, 1f, 1f), "HILAL", "Yess, okayy...")},
-                //     {"manifest - Lidya", (new(1f, 0.2f, 1f, 1f), "LIDYA", "Bakıyosun niye çok toz pembe (puf) hislerle?")},
-                //     {"manifest - Mina", (new(1f, 0.2f, 0.2f, 1f), "MINA", "Üşüyünce anılarıma sarılıp uyursun...")},
-                // };
-                // if(manifam.TryGetValue(currentTheme.name, out var fam)) DebugConsole.Log(fam.col, fam.msg, fam.name);
-                // var dark = currentTheme.dark;
+                if(ImGui.IsItemHovered())
+                {
+                    Dictionary<string, (Vector4 col, string msg)> manifam = new()
+                    {
+                        {"manifest - Sueda", (new(0.1f, 0.4f, 0.1f, 1f), "Normale göre hayat biraz hızlı gidiyo~")},
+                        {"manifest - Hilal", (new(0.6f, 0.3f, 1f, 1f), "İçim ürperiyo, beni deli ediyo~!")},
+                        {"manifest - Lidya", (new(0.4f, 0.1f, 0.4f, 1f), "Mani-fest-arem-armaaaan aoeueow!!")},
+                        {"manifest - Mina", (new(0.8f, 0.2f, 0.2f, 1f), "Üşüyünce anılarına sarılıp uyursun...")},
+                        {"manifest - Zoktay", (new(0.4f, 0.8f, 1f, 1f), "Herhangi bir akşamdı, çıkasım vardı yokuşlardan!")},
+                        {"manifest - Esin", (new(0.4f, 0.4f, 0.1f, 1f), "Gittiysen gelme geri, gelme-gelme-gelme-geri!")},
+                    };
+                    if(manifam.TryGetValue(currentTheme.name, out var fam))
+                    {
+                        // ImGui.PushStyleColor(ImGuiCol.PopupBg, new Vector4(0f, 0f, 0f, 0.8f));
+                        if(ImGui.BeginTooltip())
+                        {
+                            ImGui.TextColored(fam.col, $"{FontAwesome6.Music} {fam.msg} {FontAwesome6.Music}");
+                        }
+                        ImGui.EndTooltip();
+                        // ImGui.PopStyleColor();
+                    }   
+                }
                 ImGui.BeginDisabled();
                 ImGui.ColorEdit4("Main", ref main);
                 ImGui.ColorEdit4("Accent", ref accent);
@@ -1255,7 +1253,7 @@ public class Editor
                 ImGui.EndDisabled();
             }
 
-            ThemeHandler.ApplyCurrentTheme();
+            // ThemeHandler.ApplyCurrentTheme();
 
             ImGui.SeparatorText("Background");
 
@@ -1380,7 +1378,7 @@ public class Editor
             ImGui.Text($"Welcome to Cellular Swarm!");
             ImGui.PopFont();
             ImGui.Text($"by Ahmet Emir Uludağ {FontAwesome6.FaceSmile}");
-            ImGui.TextDisabled($"Core v{Simulation.VERSION} - App v{SimulationRenderer.VERSION}\nLast updated 11th Aug 2026");
+            ImGui.TextDisabled($"Core v{Simulation.VERSION} - App v{SimulationRenderer.VERSION}\nLast updated 20th Aug 2026");
             ImGui.EndChild();
             ImGui.PopStyleColor();
 
@@ -1395,12 +1393,11 @@ public class Editor
             ImGui.SameLine();
             ImGui.TextLinkOpenURL("Itch.io page", "https://aeuludag.itch.io/cellular-swarm/");
             ImGui.SameLine();
-            ImGui.Text("and devlogs below for a quick introduction.");
-
-            ImGui.SeparatorText("Devlogs");
-            ImGui.TextLinkOpenURL("Devlog 0 - Release", "https://aeuludag.itch.io/cellular-swarm/devlog/1315596/release");
+            ImGui.Text("and");
             ImGui.SameLine();
-            ImGui.Text("- 10.08.2026");
+            ImGui.TextLinkOpenURL("tutorial", "https://aeuludag.itch.io/cellular-swarm/devlog/1632008/introductory-guide");
+            ImGui.SameLine();
+            ImGui.Text("here for an introduction.");
             
             ImGui.Separator(); // -----------
 
@@ -1663,7 +1660,7 @@ public class Editor
         ImGui.PopID();
     }
 
-    void RemoveArea<T>(Dictionary<int, T> dictToRemoveFrom, int id, bool isReferenced, string name)
+    void RemoveArea<T>(Dictionary<int, T> dictToRemoveFrom, int id, bool isReferenced, string name, Action<int>? detach = null)
     {
         var simulation = renderer.Simulation;
         var isGridEmpty = simulation.Cells.Count == 0;
@@ -1679,6 +1676,7 @@ public class Editor
                 if (ImGui.Button($"Delete {name}"))
                 {
                     dictToRemoveFrom.Remove(id);
+                    detach?.Invoke(id);
                 }
             });
             if (!canDelete) ImGui.EndDisabled();
@@ -1762,7 +1760,7 @@ public class Editor
 
     public static void WrappingText(string text)
     {
-        ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+        ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X - 5);
         ImGui.TextUnformatted(text);
         ImGui.PopTextWrapPos();
     }

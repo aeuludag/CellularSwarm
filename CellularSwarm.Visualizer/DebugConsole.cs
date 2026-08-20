@@ -271,12 +271,13 @@ public class DebugConsole
                             M($"(And as for you, only you seem to be aware", 1000);
                             M($"of how you are supposed to feel after this", 1000);
                             M($"weird, intriguing interaction.)", 7000);
-                            while(Instance.lines[^1].text != $"{prefix}egg")
-                            {
-                                Instance.lines.RemoveAt(Instance.lines.Count - 1);
-                                Thread.Sleep(50);
-                            }
-                            Instance.lines.RemoveAt(Instance.lines.Count - 1);
+                            // while(Instance.lines[^1].text != $"{prefix}egg")
+                            // {
+                            //     Instance.lines.RemoveAt(Instance.lines.Count - 1);
+                            //     Thread.Sleep(50);
+                            // }
+                            // Instance.lines.RemoveAt(Instance.lines.Count - 1);
+                            // OUT OF RANGE EXCEPTION mostly bcs thread race condition etc etc
                             Warning("Issue forgotten.", "NETWORK");
                             Editor.Fun = 0;
                             Thread.Sleep(2000);
@@ -288,12 +289,13 @@ public class DebugConsole
                         {
                             Thread.Sleep(1000);
                             M($"(Then he needn't be here.)", 2000);
-                            while(Instance.lines[^1].text != $"{prefix}egg")
-                            {
-                                Instance.lines.RemoveAt(Instance.lines.Count - 1);
-                                Thread.Sleep(100);
-                            }
-                            Instance.lines.RemoveAt(Instance.lines.Count - 1);
+                            // while(Instance.lines[^1].text != $"{prefix}egg")
+                            // {
+                            //     Instance.lines.RemoveAt(Instance.lines.Count - 1);
+                            //     Thread.Sleep(100);
+                            // }
+                            // Instance.lines.RemoveAt(Instance.lines.Count - 1);
+                            // OUT OF RANGE EXCEPTION mostly bcs thread race condition etc etc
                             Editor.Fun = 0;
                             continueCommand = true;
                             allowSend = true;
