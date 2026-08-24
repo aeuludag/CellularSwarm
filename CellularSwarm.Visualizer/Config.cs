@@ -20,6 +20,7 @@ public class Config
     public Editor.FontMode fontMode;
     public Color backColor;
     public Color outlineColor;
+    public bool hideOutlineAlways;
     public List<Theme> customThemes = new();
 
     public Config()
@@ -43,6 +44,7 @@ public class Config
         fontMode = Editor.FontMode.Normal;
         backColor = new(20, 20, 20);
         outlineColor = new(255, 255, 255, 20);
+        hideOutlineAlways = false;
         customThemes = [];
     }
 }

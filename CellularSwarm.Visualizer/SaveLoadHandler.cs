@@ -49,7 +49,7 @@ public class SaveLoadHandler
         }
         else
         {
-            DebugConsole.Warning("Path does not exist. Trying to create one.", "SAVELOAD");
+            DebugConsole.Warning("Path does not exist. Trying to create one...", "SAVELOAD");
             Directory.CreateDirectory(location);
         }
     }

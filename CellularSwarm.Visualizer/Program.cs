@@ -12,6 +12,8 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Reflection;
 
+float Sqrt3 = MathF.Sqrt(3f);
+
 Fun = new Random().Next(0, 12); // 0-11
 
 ConfigHandler.LoadConfig();
@@ -27,7 +29,12 @@ Raylib.SetWindowMinSize(800, 400);
 Raylib.SetTargetFPS(ConfigHandler.Config.limitFPS ? ConfigHandler.Config.maxFPS : int.MaxValue);
 Raylib.SetExitKey(KeyboardKey.Null);
 
-Image icon = Raylib.LoadImage("icon_nobg.png");
+Image icon = LoadImage("icon_nobg.png");
+Raylib.ImageFormat(ref icon, PixelFormat.UncompressedR8G8B8A8);
+if (!Raylib.IsImageValid(icon)) // or icon.Width == 0
+{
+    DebugConsole.Error("Failed to load icon image! Check the file path.", "RAYLIB");
+}
 Raylib.SetWindowIcon(icon);
 Raylib.UnloadImage(icon);
 
@@ -50,7 +57,6 @@ camera.Rotation = 0f;
 
 renderer.camera = camera;
 
-bool play = false;
 var speed = 15f;
 var mouseHex = new HexCoords(0, 0);
 var showHexCursor = false;
@@ -139,6 +145,7 @@ unsafe
 
     io.NativePtr->FontDefault = Editor.RegularFont;
     rlImGui.ReloadFonts();
+    // ^^^^^^^^ GEMINI GENERATED BTW ^^^^^^^^
 }
 
 ThemeHandler.ApplyMorph();
@@ -207,14 +214,12 @@ while (!Raylib.WindowShouldClose())
     Raylib.ClearBackground(backColor);
     Raylib.BeginMode2D(camera);
 
-    // // renderer.RenderRadialGrid(9, Color.RayWhite, Color.LightGray);
-    // renderer.RenderRadialGrid(12, new Color(60, 60, 60), new Color(40, 40, 40), PointsToHex(camera.Target));
-    // renderer.RenderRadialGrid(3, new Color(80, 80, 80), new Color(40, 40, 40), PointsToHex(camera.Target));
-
-    var bottomLeft = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(0, Raylib.GetScreenHeight()), camera));
-    var topRight = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), 0), camera));
-
-    if (camera.Zoom >= 0.2f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, outlineColor);
+    if(camera.Zoom >= 0.2f && !ConfigHandler.Config.hideOutlineAlways)
+    {
+        var bottomLeft = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(0, Raylib.GetScreenHeight()), camera));
+        var topRight = PointsToHex(Raylib.GetScreenToWorld2D(new Vector2(Raylib.GetScreenWidth(), 0), camera));
+        if (camera.Zoom >= 0.2f) backRenderer.RenderRectangle(bottomLeft, topRight, backColor, outlineColor);
+    }
 
     switch (simulationRenderer.visualizationType)
     {
@@ -236,9 +241,6 @@ while (!Raylib.WindowShouldClose())
         default:
             break;
     }
-
-    // renderer.Render(bottomLeft.q, bottomLeft.r, new Color(255, 0, 0, 100), new Color(0, 0, 255, 100), "BL");
-    // renderer.Render(topRight.q, topRight.r, new Color(255, 0, 0, 100), new Color(0, 0, 255, 100), "TR");
 
     if (showHexCursor)
     {
@@ -400,7 +402,7 @@ void SetZoomWithKeyboard()
 {
     var dt = Raylib.GetFrameTime();
     if (Raylib.IsKeyDown(KeyboardKey.E)) { camera.Zoom *= (1.00f + 5f * dt); }
-    if (Raylib.IsKeyDown(KeyboardKey.Q)) { camera.Zoom *= (1.00f - 5f * dt); }
+    if (Raylib.IsKeyDown(KeyboardKey.Q)) { camera.Zoom /= (1.00f + 5f * dt); }
     camera.Zoom = Math.Clamp(camera.Zoom, camMin, camMax);
 }
 
@@ -480,10 +482,18 @@ void SetGridMode()
             if (Raylib.IsMouseButtonDown(MouseButton.Left))
             {
                 simulationRenderer.GenerateCellGrid(editor.brushSize, mouseHex, simulationRenderer.CellToDraw);
+                if(!play)
+                {
+                    UpdateNeighboursFilledAtMouseHex();
+                }
             }
             if (Raylib.IsMouseButtonDown(MouseButton.Right))
             {
                 simulationRenderer.RemoveCellGrid(editor.brushSize, mouseHex);
+                if(!play)
+                {
+                    UpdateNeighboursRingAtMouseHex();
+                }
             }
             break;
         case GridState.Erase:
@@ -491,6 +501,10 @@ void SetGridMode()
             if (Raylib.IsMouseButtonDown(MouseButton.Left))
             {
                 simulationRenderer.RemoveCellGrid(editor.brushSize, mouseHex);
+                if(!play)
+                {
+                    UpdateNeighboursRingAtMouseHex();
+                }
             }
             break;
         case GridState.Move:
@@ -523,7 +537,7 @@ HexCoords PointsToHex(Vector2 position)
     float y = -position.Y;
 
     int q = (int)Math.Round((2f / 3f) * (x / hexSize));
-    int r = (int)Math.Round((y / (hexSize * Math.Sqrt(3f))) - (q / 2f));
+    int r = (int)Math.Round((y / (hexSize * Sqrt3)) - (q / 2f));
 
     return new HexCoords(q, r);
 }
@@ -650,11 +664,11 @@ void SaveLoadWindow()
             ImGui.Text($"{FontAwesome6.TriangleExclamation} Version mismatch warning!");
             ImGui.PopStyleColor();
             if(!coreMatch) 
-                mismatchStrings.Add($"Program Core: v{Simulation.VERSION}\nFile Core: v{SaveLoadHandler.LoadedCoreVersion}");
+                mismatchStrings.Add($"Program Core: v{Simulation.VERSION}\nLoaded Core:  v{SaveLoadHandler.LoadedCoreVersion}");
             if(!rendererNameMatch)
-                mismatchStrings.Add($"Program Renderer: {SimulationRenderer.NAME}\nFile Renderer: {SaveLoadHandler.LoadedRendererName}");
+                mismatchStrings.Add($"Program Renderer: {SimulationRenderer.NAME}\nLoaded Renderer:  w{SaveLoadHandler.LoadedRendererName}");
             if(!rendererVersionMatch && rendererNameMatch)
-                mismatchStrings.Add($"Program Renderer: v{SimulationRenderer.VERSION}\nFile Renderer: v{SaveLoadHandler.LoadedRendererVersion}");
+                mismatchStrings.Add($"Program Renderer: v{SimulationRenderer.VERSION}\nLoaded Renderer:  v{SaveLoadHandler.LoadedRendererVersion}");
             HoverTooltip(string.Join('\n', mismatchStrings));
         }
         if (SaveLoadHandler.BadLoad)
@@ -676,11 +690,39 @@ void SaveLoadWindow()
     ImGui.End();
 }
 
+void UpdateNeighboursRingAtMouseHex()
+{
+    var outerCoords = simulationRenderer.GetCoordsOfRadius(editor.brushSize + 1, mouseHex);
+    var innerCoords = simulationRenderer.GetCoordsOfRadius(editor.brushSize, mouseHex);
+    var ring = outerCoords.Except(innerCoords);
+    foreach(var coords in ring)
+    {
+        if(GetSimulation().Cells.TryGetValue(coords, out Cell? cell))
+        {
+            cell.neighbourCount = cell.simulation.GetNeighbourCount(coords);
+        }
+    }
+}
+
+void UpdateNeighboursFilledAtMouseHex()
+{
+    var outerCoords = simulationRenderer.GetCoordsOfRadius(editor.brushSize + 1, mouseHex);
+    foreach(var coords in outerCoords)
+    {
+        if(GetSimulation().Cells.TryGetValue(coords, out Cell? cell))
+        {
+            cell.neighbourCount = cell.simulation.GetNeighbourCount(coords);
+        }
+    }
+}
+
 void SaveSimulation()
 {
     SaveLoadHandler.SaveSimulationToSimulationsFolder(GetSimulation(), simulationRenderer, simulationName);
     SaveLoadHandler.BadLoad = false;
     SaveLoadHandler.LoadedCoreVersion = Simulation.VERSION;
+    SaveLoadHandler.LoadedRendererName = SimulationRenderer.NAME;
+    SaveLoadHandler.LoadedRendererVersion = SimulationRenderer.VERSION;
 }
 
 void ResetSimulation()

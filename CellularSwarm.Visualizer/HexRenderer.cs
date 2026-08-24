@@ -8,6 +8,7 @@ public class HexRenderer
     public Camera2D camera;
     public Vector2 offset;
     public bool showText;
+    private static readonly float Sqrt3 = MathF.Sqrt(3f);
 
     public void RenderRadialGrid(int radius, Color fillColor, Color outlineColor, HexCoords offset)
     {
@@ -26,7 +27,7 @@ public class HexRenderer
     public void Render(int q, int r, Color fillColor, Color outlineColor)
     {
         float x = hexSize * q * 3 / 2;
-        float y = hexSize * (float)Math.Sqrt(3f) * (r + (q / 2f)); // hex_size * r * math.sqrt(3) + hex_size * q * math.sqrt(3) / 2
+        float y = hexSize * Sqrt3 * (r + (q / 2f)); // hex_size * r * math.sqrt(3) + hex_size * q * math.sqrt(3) / 2
         var pos = offset + new Vector2(x, -y);
 
         Raylib.DrawPoly(pos, 6, hexSize, 0, outlineColor);
@@ -38,7 +39,7 @@ public class HexRenderer
     public void Render(int q, int r, Color fillColor)
     {
         float x = hexSize * q * 3 / 2;
-        float y = hexSize * (float)Math.Sqrt(3f) * (r + (q / 2f));
+        float y = hexSize * Sqrt3 * (r + (q / 2f));
         var pos = offset + new Vector2(x, -y);
 
         Raylib.DrawPoly(pos, 6, hexSize, 0, fillColor);
@@ -51,6 +52,7 @@ public class HexRenderer
         var pos = offset + new Vector2(x, -y);
         Raylib.DrawPoly(pos, 6, hexSize, 0, fillColor);
     }
+    
     public void Render(float x, float y, Color fillColor, float scale)
     {
         var pos = offset + new Vector2(x, -y);
@@ -69,7 +71,7 @@ public class HexRenderer
         foreach (var cellPair in simulation.Cells)
         {
             float x = hexSize * cellPair.Key.q * 3 / 2;
-            float y = hexSize * (float)Math.Sqrt(3f) * (cellPair.Key.r + (cellPair.Key.q / 2f));
+            float y = hexSize * (float)Sqrt3 * (cellPair.Key.r + (cellPair.Key.q / 2f));
             var pos = offset + new Vector2(x, -y);
 
             if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
@@ -103,7 +105,7 @@ public class HexRenderer
         foreach (var cellPair in simulation.Cells)
         {
             float x = hexSize * cellPair.Key.q * 3 / 2;
-            float y = hexSize * (float)Math.Sqrt(3f) * (cellPair.Key.r + (cellPair.Key.q / 2f));
+            float y = hexSize * (float)Sqrt3 * (cellPair.Key.r + (cellPair.Key.q / 2f));
             var pos = offset + new Vector2(x, -y);
 
             if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
@@ -126,7 +128,7 @@ public class HexRenderer
         foreach (var cellPair in simulation.Cells)
         {
             float x = hexSize * cellPair.Key.q * 3 / 2;
-            float y = hexSize * (float)Math.Sqrt(3f) * (cellPair.Key.r + (cellPair.Key.q / 2f));
+            float y = hexSize * (float)Sqrt3 * (cellPair.Key.r + (cellPair.Key.q / 2f));
             var pos = offset + new Vector2(x, -y);
 
             if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
@@ -146,7 +148,7 @@ public class HexRenderer
         foreach (var cellPair in simulation.Cells)
         {
             float x = hexSize * cellPair.Key.q * 3 / 2;
-            float y = hexSize * (float)Math.Sqrt(3f) * (cellPair.Key.r + (cellPair.Key.q / 2f));
+            float y = hexSize * (float)Sqrt3 * (cellPair.Key.r + (cellPair.Key.q / 2f));
             var pos = offset + new Vector2(x, -y);
 
             if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;
@@ -166,7 +168,7 @@ public class HexRenderer
         foreach (var cellPair in simulation.Cells)
         {
             float x = hexSize * cellPair.Key.q * 3 / 2;
-            float y = hexSize * (float)Math.Sqrt(3f) * (cellPair.Key.r + (cellPair.Key.q / 2f));
+            float y = hexSize * (float)Sqrt3 * (cellPair.Key.r + (cellPair.Key.q / 2f));
             var pos = offset + new Vector2(x, -y);
 
             if (!IsOnScreen(pos, hexSize, topLeft, bottomRight)) continue;

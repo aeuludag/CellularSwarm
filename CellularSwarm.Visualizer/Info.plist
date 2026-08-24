@@ -6,16 +6,16 @@
     <string>CellularSwarm.Visualizer</string>
 
     <key>CFBundleIdentifier</key>
-    <string>com.aeuludag.cellularswarm</string>
+    <string>com.aeuludag.cellular-swarm</string>
 
     <key>CFBundleName</key>
     <string>Cellular Swarm</string>
 
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.0.260823</string>
 
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>1.0.260823</string>
 
     <key>CFBundlePackageType</key>
     <string>APPL</string>
@@ -30,7 +30,7 @@
             <key>CFBundleTypeName</key>
             <string>Cellular Swarm Simulation</string>
             <key>CFBundleTypeRole</key>
-            <string>Viewer</string>
+            <string>None</string>
             <key>LSHandlerRank</key>
             <string>Owner</string>
             <key>LSTypeIsPackage</key>

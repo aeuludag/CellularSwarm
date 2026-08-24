@@ -16,6 +16,7 @@ public class Editor
 
     public int brushSize;
     public GridState gridState;
+    public static bool play = false;
 
     public bool showMorphogenEditor = false;
     public bool showCellTypeEditor = false;
@@ -263,12 +264,12 @@ public class Editor
             if (ImGui.SliderFloat($"Diffusion Factor##diffusionSlider", ref difFac, 0f, 1f)) { morphogen.diffusionFactor = Math.Clamp(difFac, 0f, 1f); }
             // ImGui.SameLine();
             // WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat($"Diffusion Factor", ref difFac)) { difFac = Math.Clamp(difFac, 0f, 1f); morphogen.diffusionFactor = difFac; } });
-            HoverTooltip("How fast the morphogen flows & diffuses.");
+            HoverTooltip("How fast the morphogen flows & diffuses");
             if (ImGui.SliderFloat($"Decay Factor##decaySlider", ref decFac, 0f, 1f)) { morphogen.decayFactor = Math.Clamp(decFac, 0f, 1f); }
             // ImGui.SameLine();
             // WidthX(ImGui.CalcTextSize($"{max:F3}").X + 20, () => { if (ImGui.InputFloat($"Decay Factor", ref decFac)) { decFac = Math.Clamp(decFac, 0f, 1f); morphogen.decayFactor = decFac; } });
 
-            HoverTooltip("How fast the morphogen decays.");
+            HoverTooltip("How fast the morphogen decays");
 
             List<string> referencedInConditions = new();
             List<string> referencedInActions = new();
@@ -352,7 +353,8 @@ public class Editor
             {
                 case GeneAction.ActionType.ChangeMorphogen:
                     ImGui.SeparatorText("Morphogen Delta");
-                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, -max, max);
+                    HoverTooltip("Change in morphogen from -100 to +100");
+                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, -max, max, "Change Amount");
                     foreach (var morphogenId in geneAction.actionMorphogens.Keys)
                     {
                         geneAction.actionMorphogens[morphogenId] = Math.Clamp(geneAction.actionMorphogens[morphogenId], -100f, 100f);
@@ -361,7 +363,7 @@ public class Editor
                 case GeneAction.ActionType.Multiply:
                     ImGui.SeparatorText("Morphogen Share Rate");
                     HoverTooltip("0.0 : leave all to the parent\n0.5 : share equally (default)\n1.0 : give all to the daughter");
-                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name);
+                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, 0, 1, "Share Rate");
                     foreach (var morphogenId in geneAction.actionMorphogens.Keys)
                     {
                         geneAction.actionMorphogens[morphogenId] = Math.Clamp(geneAction.actionMorphogens[morphogenId], 0f, 1f);
@@ -379,7 +381,7 @@ public class Editor
                 case GeneAction.ActionType.TransportMorphogen:
                     ImGui.SeparatorText("Active Transportation");
                     HoverTooltip("-1.0 : pull all of morphogen\n 0.0 : no transportation (default)\n+1.0 : push all of morphogen");
-                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, min: -1, max: +1);
+                    DictionaryFloatEditor(key, $"Action Morphogens", geneAction.actionMorphogens, simulation.Morphogens.Keys.ToList(), (id) => simulation.Morphogens[id].name, -1, +1, "Pressure");
                     foreach (var morphogenId in geneAction.actionMorphogens.Keys)
                     {
                         geneAction.actionMorphogens[morphogenId] = Math.Clamp(geneAction.actionMorphogens[morphogenId], -1f, 1f);
@@ -660,11 +662,11 @@ public class Editor
 
             if (ImGui.InputText("Name", ref name, 64)) { simulation.name = name; Raylib.SetWindowTitle($"\"{name}\" - Cellular Swarm"); }
             if (ImGui.InputFloat("Diffusion Threshold", ref diffusionThreshold)) { diffuser.diffusionThreshold = Math.Max(0, diffusionThreshold); }
-            HoverTooltip("The minimum amount of difference in concentration needed to diffuse.\nAlso the minimum amount of concentration a morphogen can be in (after zero).");
+            HoverTooltip("The minimum amount of difference in concentration needed to diffuse.\nAlso the minimum amount of concentration a morphogen can be in (after zero)");
             if (ImGui.InputFloat("Diffusion Factor", ref diffusionFactor)) { diffuser.diffusionFactor = Math.Clamp(diffusionFactor, 0f, 1f); }
-            HoverTooltip("The general diffusion factor.");
+            HoverTooltip("The general diffusion factor");
             if (ImGui.InputInt("Diffusion Steps", ref diffusionSteps)) { simulation.diffusionSteps = Math.Max(0, diffusionSteps); }
-            HoverTooltip("The amount of diffusion steps performed in each simulation step.");
+            HoverTooltip("The amount of diffusion steps performed in each simulation step");
 
 
             InfoHeader(() =>
@@ -790,7 +792,7 @@ public class Editor
             {
                 renderer.cellPalette.Add((new(cell), "New Cell"));
             }
-            HoverTooltip($"Add the cell to {FontAwesome6.Pen} Brush.");
+            HoverTooltip($"Add the cell to {FontAwesome6.Pen} Brush");
             ImGui.Separator();
 
             ImGui.Text($"Cell Coordinates: {coords}");
@@ -817,6 +819,13 @@ public class Editor
                 if (ImGui.Button("Remove Cell"))
                 {
                     simulation.Cells.Remove(coords);
+                    if(!play) foreach(var neighbour in coords.GetNeighbouringCoords())
+                    {
+                        if(simulation.Cells.TryGetValue(neighbour, out Cell? cell))
+                        {
+                            cell.neighbourCount = cell.simulation.GetNeighbourCount(neighbour);
+                        }
+                    }
                 }
             });
 
@@ -834,25 +843,25 @@ public class Editor
             {
                 gridState = GridState.Move;
             }
-            HoverTooltip("Move the grid.", "1", true);
+            HoverTooltip("Move the grid", "1", true);
             ImGui.SameLine();
             if (ImGui.RadioButton(IconFonts.FontAwesome6.Pen + " Brush", gridState == GridState.Brush))
             {
                 gridState = GridState.Brush;
             }
-            HoverTooltip("Place cells in palette.\n(Inspect cells to add to palette)", "2", true);
+            HoverTooltip("Place cells in palette\n(Inspect cells to add to palette)", "2", true);
             ImGui.SameLine();
             if (ImGui.RadioButton(IconFonts.FontAwesome6.Eraser + " Eraser", gridState == GridState.Erase))
             {
                 gridState = GridState.Erase;
             }
-            HoverTooltip("Erase cells.", "3", true);
+            HoverTooltip("Erase cells", "3", true);
             ImGui.SameLine();
             if (ImGui.RadioButton(IconFonts.FontAwesome6.MagnifyingGlass + " Inspect", gridState == GridState.Inspect))
             {
                 gridState = GridState.Inspect;
             }
-            HoverTooltip("Inspect cells.", "4", true);
+            HoverTooltip("Inspect cells", "4", true);
 
             ImGui.Separator();
 
@@ -871,7 +880,7 @@ public class Editor
             ImGui.SameLine();
 
             renderer.cellIndex = Selector("cellPaletteIndex", "Cell to Draw", Enumerable.Range(0, renderer.cellPalette.Count).ToList(), (i) => renderer.cellPalette[i].name);
-            HoverTooltip("The cell to be drawn.", "Shift + 1..9", true);
+            HoverTooltip("The cell to be drawn", "Shift + 1..9", true);
 
             var name = renderer.cellPalette[renderer.cellIndex].name;
             if (ImGui.InputText("Cell Name", ref name, 64))
@@ -1029,7 +1038,7 @@ public class Editor
 
             CloseButton(ref showConsole);
             ImGui.SameLine();
-            ImGui.PushItemWidth(ImGui.GetWindowWidth() - 160);
+            ImGui.PushItemWidth(ImGui.GetWindowWidth() - FS(10, 18));
             ImGui.InputText("##input", ref consoleText, 256);
             ImGui.SameLine();
 
@@ -1140,12 +1149,6 @@ public class Editor
                 ConfigHandler.SaveConfig();
                 ThemeHandler.ApplyCurrentTheme();
             }
-            // ImGui.SameLine();
-            // if(ImGui.Button("Save Settings"))
-            // {
-            //     ConfigHandler.SaveConfig(); 
-            //     ThemeHandler.ApplyCurrentTheme();
-            // }
 
             ImGui.Separator();
             ImGui.SeparatorText("UI");
@@ -1268,6 +1271,9 @@ public class Editor
             ImGui.ColorEdit4("Outline Color", ref oc2v);
             bc2v.W = 1f;
 
+            ImGui.Checkbox("Always Hide Outline", ref ConfigHandler.Config.hideOutlineAlways);
+            HoverTooltip("Hide background grid when zoomed in\n(Recommended if performance is low)");
+
             ConfigHandler.Config.backColor = v2c(bc2v);
             ConfigHandler.Config.outlineColor = v2c(oc2v);
 
@@ -1303,7 +1309,15 @@ public class Editor
             
             ImGui.SeparatorText("Simulations Path");
 
-            WidthX(ImGui.GetContentRegionAvail().X - FS(2, 4), () => ImGui.InputText("##simulationsPath", ref ConfigHandler.Config.simulationsPath, 512));
+            WidthX(ImGui.GetContentRegionAvail().X - FS(4, 4), () => ImGui.InputText("##simulationsPath", ref ConfigHandler.Config.simulationsPath, 512));
+            
+            ImGui.SameLine();
+            if (ImGui.Button($"{FontAwesome6.ArrowRotateLeft}##reset"))
+            {
+                ConfigHandler.Config.simulationsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Simulations");
+            }
+            HoverTooltip("Reset to default folder");
+
             ImGui.SameLine();
             if (ImGui.Button($"{FontAwesome6.Folder}##sim"))
             {
@@ -1343,7 +1357,7 @@ public class Editor
                     }
                 break;
                 case UpdateChecker.CheckStatus.Checking:
-                    ImGui.Text($"{FontAwesome6.Spinner} Checking{new string('.', (int)Math.Floor((2 * (1000f * DateTime.Now.Second + DateTime.Now.Millisecond) / 1000f) % 3) + 1)}");
+                    ImGui.Text($"{FontAwesome6.Spinner} Checking{new string('.', (int)Math.Floor((4 * (1000f * DateTime.Now.Second + DateTime.Now.Millisecond) / 1000f) % 3) + 1)}");
                 break;
                 case UpdateChecker.CheckStatus.Checked:
                     if(UpdateChecker.Version == SimulationRenderer.VERSION)
@@ -1351,10 +1365,14 @@ public class Editor
                         ImGui.TextColored(ThemeHandler.GetCurrentTheme().dark ? GREEN_LIGHT : GREEN_DARK, $"{FontAwesome6.Check} You are up to date.");
                     } else
                     {
-                        ImGui.TextColored(ThemeHandler.GetCurrentTheme().dark ? BLUE_LIGHT : BLUE_DARK, $"{FontAwesome6.CircleInfo} Update Available!");
-                        HoverTooltip($"New Version:     v{UpdateChecker.Version}\nCurrent Version: v{SimulationRenderer.VERSION}");
-                        // ImGui.SameLine();
-                        // ImGui.TextLinkOpenURL($"{FontAwesome6.UpRightFromSquare}", "https://aeuludag.itch.io/cellular-swarm/");
+                        if(ImGui.Button($"{FontAwesome6.UpRightFromSquare}"))
+                        {
+                            Process.Start(new ProcessStartInfo("https://aeuludag.itch.io/cellular-swarm/") { UseShellExecute = true });
+                        }
+                        ImGui.SameLine();
+                        HoverTooltip("Open 'https://aeuludag.itch.io/cellular-swarm/'");
+                        ImGui.TextColored(ThemeHandler.GetCurrentTheme().dark ? BLUE_LIGHT : BLUE_DARK, $"{FontAwesome6.CircleInfo} Update Available on Itch!");
+                        HoverTooltip($"{FontAwesome6.Star} {UpdateChecker.Title} {FontAwesome6.Star}\n{new string('-', UpdateChecker.Title!.Length + 6)}\n{UpdateChecker.Description}", $"{FontAwesome6.Desktop} {UpdateChecker.Platforms}\n{FontAwesome6.CodeCommit} {UpdateChecker.Version}");
                     }
                 break;
                 case UpdateChecker.CheckStatus.Error:
@@ -1378,7 +1396,7 @@ public class Editor
             ImGui.Text($"Welcome to Cellular Swarm!");
             ImGui.PopFont();
             ImGui.Text($"by Ahmet Emir Uludağ {FontAwesome6.FaceSmile}");
-            ImGui.TextDisabled($"Core v{Simulation.VERSION} - App v{SimulationRenderer.VERSION}\nLast updated 20th Aug 2026");
+            ImGui.TextDisabled($"Core v{Simulation.VERSION} - App v{SimulationRenderer.VERSION}\nLast updated 23rd Aug 2026");
             ImGui.EndChild();
             ImGui.PopStyleColor();
 
@@ -1405,9 +1423,12 @@ public class Editor
             ImGui.TextLinkOpenURL("@aeuludag", "https://aeuludag.github.io");
 
             ImGui.SameLine();
+            ImGui.TextLinkOpenURL("@lim10dev", "https://www.youtube.com/@lim10dev");
+
+            ImGui.SameLine();
             ImGui.TextLinkOpenURL("Source Code", "https://github.com/aeuludag/CellularSwarm");
 
-            ImGui.TextDisabled($"{FontAwesome6.Heart} Made with Raylib, ImGui and love <3.");
+            ImGui.TextDisabled($"{FontAwesome6.Heart} Made with Raylib, ImGui and love <3");
 
             ImGui.PopTextWrapPos();
             ImGui.PopID();
@@ -1460,7 +1481,7 @@ public class Editor
     {
         DebugConsole.Info($"Loading image [{fileName}]...", "EDITOR");
         byte[] imageBytes;
-        using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"CellularSwarm.Visualizer.{fileName}"))
+        using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"CellularSwarm.Visualizer.Assets.{fileName}"))
         {
             imageBytes = new byte[stream!.Length];
             stream.ReadExactly(imageBytes, 0, imageBytes.Length);
@@ -1554,14 +1575,14 @@ public class Editor
         return selectorStates[key];
     }
 
-    void DictionaryFloatEditor(string key, string label, Dictionary<int, float> dict, List<int> allItems, Func<int, string> getName, float min = 0f, float max = 1f)
+    void DictionaryFloatEditor(string key, string label, Dictionary<int, float> dict, List<int> allItems, Func<int, string> getName, float min = 0f, float max = 1f, string valueLabel = "Value")
     {
         ImGui.PushID(key);
         // mostly gpt written
         if (ImGui.BeginTable($"{label}##{key}", 3, ImGuiTableFlags.None))
         {
             ImGui.TableSetupColumn("Name");
-            ImGui.TableSetupColumn("Value");
+            ImGui.TableSetupColumn(valueLabel);
             ImGui.TableSetupColumn("Remove");
             ImGui.TableHeadersRow();
 

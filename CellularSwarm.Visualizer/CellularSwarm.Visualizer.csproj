@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <ApplicationIcon>icon.ico</ApplicationIcon> 
+    <ApplicationIcon>Assets/icon.ico</ApplicationIcon> 
     <AssemblyName>CellularSwarm.Visualizer</AssemblyName>
   </PropertyGroup>
 
@@ -14,10 +14,10 @@
     <PackageReference Include="Raylib-cs" Version="7.0.1" />
     <PackageReference Include="rlImgui-cs" Version="3.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
-    <EmbeddedResource Include="icon.png" />
-    <EmbeddedResource Include="icon_nobg.png" />
-    <EmbeddedResource Include="ChivoMono-Medium.ttf" />
-    <EmbeddedResource Include="fa-solid-900.ttf" />
+    <EmbeddedResource Include="Assets\icon.png" />
+    <EmbeddedResource Include="Assets\icon_nobg.png" />
+    <EmbeddedResource Include="Assets\ChivoMono-Medium.ttf" />
+    <EmbeddedResource Include="Assets\fa-solid-900.ttf" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,16 +41,16 @@
     <MakeDir Directories="$(IconsetDir)" />
 
     <!-- 2. Generate the mandatory multi-resolution icon layers using native sips scaling -->
-    <Exec Command="sips -z 16 16     icon.png --out &quot;$(IconsetDir)/icon_16x16.png&quot;" />
-    <Exec Command="sips -z 32 32     icon.png --out &quot;$(IconsetDir)/icon_16x16@2x.png&quot;" />
-    <Exec Command="sips -z 32 32     icon.png --out &quot;$(IconsetDir)/icon_32x32.png&quot;" />
-    <Exec Command="sips -z 64 64     icon.png --out &quot;$(IconsetDir)/icon_32x32@2x.png&quot;" />
-    <Exec Command="sips -z 128 128   icon.png --out &quot;$(IconsetDir)/icon_128x128.png&quot;" />
-    <Exec Command="sips -z 256 256   icon.png --out &quot;$(IconsetDir)/icon_128x128@2x.png&quot;" />
-    <Exec Command="sips -z 256 256   icon.png --out &quot;$(IconsetDir)/icon_256x256.png&quot;" />
-    <Exec Command="sips -z 512 512   icon.png --out &quot;$(IconsetDir)/icon_256x256@2x.png&quot;" />
-    <Exec Command="sips -z 512 512   icon.png --out &quot;$(IconsetDir)/icon_512x512.png&quot;" />
-    <Exec Command="sips -z 1024 1024 icon.png --out &quot;$(IconsetDir)/icon_512x512@2x.png&quot;" />
+    <Exec Command="sips -z 16 16     Assets/icon.png --out &quot;$(IconsetDir)/icon_16x16.png&quot;" />
+    <Exec Command="sips -z 32 32     Assets/icon.png --out &quot;$(IconsetDir)/icon_16x16@2x.png&quot;" />
+    <Exec Command="sips -z 32 32     Assets/icon.png --out &quot;$(IconsetDir)/icon_32x32.png&quot;" />
+    <Exec Command="sips -z 64 64     Assets/icon.png --out &quot;$(IconsetDir)/icon_32x32@2x.png&quot;" />
+    <Exec Command="sips -z 128 128   Assets/icon.png --out &quot;$(IconsetDir)/icon_128x128.png&quot;" />
+    <Exec Command="sips -z 256 256   Assets/icon.png --out &quot;$(IconsetDir)/icon_128x128@2x.png&quot;" />
+    <Exec Command="sips -z 256 256   Assets/icon.png --out &quot;$(IconsetDir)/icon_256x256.png&quot;" />
+    <Exec Command="sips -z 512 512   Assets/icon.png --out &quot;$(IconsetDir)/icon_256x256@2x.png&quot;" />
+    <Exec Command="sips -z 512 512   Assets/icon.png --out &quot;$(IconsetDir)/icon_512x512.png&quot;" />
+    <Exec Command="sips -z 1024 1024 Assets/icon.png --out &quot;$(IconsetDir)/icon_512x512@2x.png&quot;" />
 
     <!-- 3. Compile the folder into a production .icns container -->
     <MakeDir Directories="$(ResourcesDir)" />

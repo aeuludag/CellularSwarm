@@ -6,7 +6,7 @@ using Raylib_cs;
 
 public class SimulationRenderer
 {
-    public const string VERSION = "0.1.260819";
+    public const string VERSION = "1.0.260823";
     public const string NAME = "Default Limon Renderer";
     public Simulation Simulation { get => _simulation; set => _simulation = value; }
     public VisualizationType visualizationType = VisualizationType.ThreeMorphogens;
@@ -147,6 +147,22 @@ public class SimulationRenderer
 
     //     return simulation;
     // }
+
+    public List<HexCoords> GetCoordsOfRadius(int radius, HexCoords offset)
+    {
+        List<HexCoords> coords = new();
+        for (int q = -radius; q <= radius; q++)
+        {
+            for (int r = -radius; r <= radius; r++)
+            {
+                if (Math.Abs(q + r) <= radius)
+                {
+                    coords.Add(offset + new HexCoords(q, r));
+                }
+            }
+        }
+        return coords;
+    }
 
     public void GenerateCellGrid(int radius, HexCoords offset, Vector3 palette)
     {
