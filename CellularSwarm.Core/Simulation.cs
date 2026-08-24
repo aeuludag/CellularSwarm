@@ -6,7 +6,7 @@ namespace CellularSwarm.Core;
 
 public class Simulation
 {
-    public const string VERSION = "1.0.260823";
+    public const string VERSION = "1.0.260825";
     public int id;
     public string name;
 
@@ -56,40 +56,53 @@ public class Simulation
         Genes.Add(0, new(DefaultGene));
     }
 
-    public List<HexCoords> GetNeighbours(HexCoords coords)
-    {
-        var neighbours = new List<HexCoords>();
-        var neighbouringTiles = coords.GetNeighbouringCoords();
-        for (int i = 0; i < 6; i++)
-        {
-            if (Cells.ContainsKey(neighbouringTiles[i])) { neighbours.Add(neighbouringTiles[i]); }
-        }
-        return neighbours;
-    }
+    private ThreadLocal<List<HexCoords>> _threadLocalNeighbourBuffer = new(() => new List<HexCoords>(6));
 
-    public HexCoords?[] GetNeighboursArray(HexCoords coords)
+    public List<HexCoords> GetNeighboursNonAlloc(HexCoords coords)
     {
-        var neighbours = new HexCoords?[6];
-        var neighbouringTiles = coords.GetNeighbouringCoords();
+        var buffer = _threadLocalNeighbourBuffer.Value;
+        buffer!.Clear(); // Reuse the same list!
+
+        // No more new HexCoords[6] arrays!
         for (int i = 0; i < 6; i++)
         {
-            if (Cells.ContainsKey(neighbouringTiles[i])) { neighbours[i] = neighbouringTiles[i]; } else { neighbours[i] = null; }
+            var tile = coords + HexCoords.Offsets[i];
+            if (Cells.ContainsKey(tile)) 
+            { 
+                buffer.Add(tile); 
+            }
         }
-        return neighbours;
+        return buffer;
     }
 
     public int GetNeighbourCount(HexCoords coords)
     {
-        int n = 0;
-        var neighbouringTiles = coords.GetNeighbouringCoords();
+       int n = 0;
+       
+       // Calculate and check the offset directly. Zero memory allocated!
+       for (int i = 0; i < 6; i++)
+       {
+           if (Cells.ContainsKey(coords + HexCoords.Offsets[i])) 
+           { 
+               n++; 
+           }
+       }
 
-        for (int i = 0; i < 6; i++)
-        {
-            if (Cells.ContainsKey(neighbouringTiles[i])) { n++; }
-        }
-
-        return n;
+       return n;
     }
+
+    // public int GetNeighbourCount(HexCoords coords)
+    // {
+    //     int n = 0;
+    //     var neighbouringTiles = coords.GetNeighbouringCoords();
+
+    //     for (int i = 0; i < 6; i++)
+    //     {
+    //         if (Cells.ContainsKey(neighbouringTiles[i])) { n++; }
+    //     }
+
+    //     return n;
+    // }
 
     public Dictionary<HexCoords, Cell> Step()
     {
@@ -114,8 +127,9 @@ public class Simulation
             var cell = Cells[coords];
             List<HexCoords> freeTiles = new(); // why did i use tile here?
 
-            foreach (var tile in coords.GetNeighbouringCoords())
+            for (int i = 0; i < 6; i++)
             {
+                var tile = coords + HexCoords.Offsets[i];
                 if (Cells.ContainsKey(tile)) continue;
                 freeTiles.Add(tile);
             }
@@ -126,9 +140,9 @@ public class Simulation
                 continue;
             }
 
-            int i = random.Next(freeTiles.Count);
+            int j = random.Next(freeTiles.Count);
             var newCell = cell.Multiply();
-            Cells.Add(freeTiles[i], newCell);
+            Cells.Add(freeTiles[j], newCell);
         }
 
         for (int i = 0; i < diffusionSteps; i++)
@@ -151,35 +165,44 @@ public class Simulation
 
     public Dictionary<HexCoords, Cell> StepParallel()
     {
+        if (Cells.Count < 16) return Step();   
+
+        var cellArray = Cells.ToArray();
+
         List<HexCoords> cellsToMultiply = new();
         List<HexCoords> cellsToApoptosis = new();
 
-        ConcurrentBag<HexCoords> cellsToMultiplyBag = new();
-        ConcurrentBag<HexCoords> cellsToApoptosisBag = new();
+        object syncObj = new(); 
 
-        Parallel.ForEach(Cells, (cellPair) =>
+        ParallelChunker.Run(cellArray, (start, end) =>
+        {
+            for (int j = start; j < end; j++)
+            {
+                var coords = cellArray[j].Key;
+                var cell = cellArray[j].Value;
+    
+                cell.neighbourCount = GetNeighbourCount(coords);
+                cell.Step();
+    
+                if (cell.shouldApoptosis)
                 {
-                    var coords = cellPair.Key;
-                    var cell = cellPair.Value;
-
-                    cell.neighbourCount = GetNeighbourCount(coords);
-
-                    cell.Step();
-
-                    if (cell.shouldApoptosis) cellsToApoptosisBag.Add(coords);
-                    if (cell.shouldMultiply) cellsToMultiplyBag.Add(coords);
-                });
-
-        cellsToMultiply = cellsToMultiplyBag.ToList();
-        cellsToApoptosis = cellsToApoptosisBag.ToList();
+                    lock (syncObj) cellsToApoptosis.Add(coords);
+                }
+                if (cell.shouldMultiply)
+                {
+                    lock (syncObj) cellsToMultiply.Add(coords);
+                }
+            }
+        });
 
         foreach (var coords in cellsToMultiply)
         {
             var cell = Cells[coords];
-            List<HexCoords> freeTiles = new(); // why did i use tile here?
+            List<HexCoords> freeTiles = new(); 
 
-            foreach (var tile in coords.GetNeighbouringCoords())
+            for (int i = 0; i < 6; i++)
             {
+                var tile = coords + HexCoords.Offsets[i];
                 if (Cells.ContainsKey(tile)) continue;
                 freeTiles.Add(tile);
             }
@@ -190,154 +213,31 @@ public class Simulation
                 continue;
             }
 
-            int i = random.Next(freeTiles.Count);
+            int j = random.Next(freeTiles.Count);
             var newCell = cell.Multiply();
-            Cells.Add(freeTiles[i], newCell);
+            Cells.Add(freeTiles[j], newCell);
         }
-
-        // Diffuser.DiffuseAllOfCollectionParallel(cellsToApoptosis);
 
         for (int i = 0; i < diffusionSteps; i++)
         {
-            Diffuser.DiffuseParallel();
+            // PASS THE EXISTING ARRAY INSTEAD OF REALLOCATING!
+            Diffuser.DiffuseParallel(cellArray);
         }
 
         foreach (var coords in cellsToApoptosis)
         {
             var cell = Cells[coords];
-
-            cell.Apoptosis();
+            // cell.Apoptosis();
             Cells.Remove(coords);
         }
 
-        Diffuser.ActiveTransportationCollectionParallel(Cells.Keys.ToList());
+        // Use ToArray() to avoid List overhead. 
+        // Note: This snapshot is taken AFTER apoptosis, so it accurately reflects surviving cells.
+        Diffuser.ActiveTransportationCollectionParallel(Cells.Keys.ToArray());
 
         return Cells;
     }
-
-    // public Dictionary<HexCoords, Cell> DiagnosticStep(bool useParallel, List<int> cellStep, List<int> multiplication, List<int> diffusion, List<int> apoptosis)
-    // {
-    //     var sw = new Stopwatch();
-    //     TimeSpan cellStepElapsed;
-    //     TimeSpan multiplicationElapsed;
-    //     TimeSpan diffusionElapsed;
-    //     TimeSpan apoptosisElapsed;
-
-    //     List<HexCoords> cellsToMultiply = new();
-    //     List<HexCoords> cellsToApoptosis = new();
-
-    //     sw.Start();
-    //     if (useParallel)
-    //     {
-    //         ConcurrentBag<HexCoords> cellsToMultiplyBag = new();
-    //         ConcurrentBag<HexCoords> cellsToApoptosisBag = new();
-    //         Parallel.ForEach(Cells, (cellPair) =>
-    //                 {
-    //                     var coords = cellPair.Key;
-    //                     var cell = cellPair.Value;
-
-    //                     cell.neighbourCount = GetNeighbourCount(coords);
-
-    //                     cell.Step();
-
-    //                     if (cell.shouldApoptosis) cellsToApoptosisBag.Add(coords);
-    //                     if (cell.shouldMultiply) cellsToMultiplyBag.Add(coords);
-    //                 });
-
-    //         cellsToMultiply = cellsToMultiplyBag.ToList();
-    //         cellsToApoptosis = cellsToApoptosisBag.ToList();
-    //     }
-    //     else
-    //     {
-    //         foreach (var cellPair in Cells)
-    //         {
-    //             var coords = cellPair.Key;
-    //             var cell = cellPair.Value;
-
-    //             cell.neighbourCount = GetNeighbourCount(coords);
-
-    //             cell.Step();
-
-    //             if (cell.shouldApoptosis) cellsToApoptosis.Add(coords);
-    //             if (cell.shouldMultiply) cellsToMultiply.Add(coords);
-    //         }
-    //     }
-    //     sw.Stop();
-    //     cellStepElapsed = sw.Elapsed;
-
-    //     sw = Stopwatch.StartNew();
-    //     foreach (var coords in cellsToMultiply)
-    //     {
-    //         var cell = Cells[coords];
-    //         List<HexCoords> freeTiles = new(); // why did i use tile here?
-
-    //         foreach (var tile in coords.GetNeighbouringCoords())
-    //         {
-    //             if (Cells.ContainsKey(tile)) continue;
-    //             freeTiles.Add(tile);
-    //         }
-
-    //         if (freeTiles.Count == 0)
-    //         {
-    //             cell.shouldMultiply = false;
-    //             continue;
-    //         }
-
-    //         int i = random.Next(freeTiles.Count);
-    //         var newCell = cell.Multiply();
-    //         Cells.Add(freeTiles[i], newCell);
-    //     }
-    //     sw.Stop();
-    //     multiplicationElapsed = sw.Elapsed;
-
-    //     sw = Stopwatch.StartNew();
-    //     if (useParallel)
-    //     {
-    //         for (int i = 0; i < diffusionSteps; i++)
-    //         {
-    //             Diffuser.DiffuseParallel();
-    //         }
-    //         sw.Stop();
-    //         diffusionElapsed = sw.Elapsed;
-
-    //         sw = Stopwatch.StartNew();
-    //         foreach (var coords in cellsToApoptosis)
-    //         {
-    //             var cell = Cells[coords];
-    //             cell.Apoptosis();
-    //             Cells.Remove(coords);
-    //         }
-    //         sw.Stop();
-    //         apoptosisElapsed = sw.Elapsed;
-    //     }
-    //     else
-    //     {
-    //         for (int i = 0; i < diffusionSteps; i++)
-    //         {
-    //             Diffuser.Diffuse();
-    //         }
-    //         sw.Stop();
-    //         diffusionElapsed = sw.Elapsed;
-
-    //         sw = Stopwatch.StartNew();
-    //         foreach (var coords in cellsToApoptosis)
-    //         {
-    //             var cell = Cells[coords];
-
-    //             cell.Apoptosis();
-    //             Cells.Remove(coords);
-    //         }
-    //         sw.Stop();
-    //         apoptosisElapsed = sw.Elapsed;
-    //     }
-
-    //     cellStep.Add(cellStepElapsed.Microseconds);
-    //     multiplication.Add(multiplicationElapsed.Microseconds);
-    //     diffusion.Add(diffusionElapsed.Microseconds);
-    //     apoptosis.Add(apoptosisElapsed.Microseconds);
-
-    //     return Cells;
-    // }
+    
     public void AddCell(HexCoords coords, Cell cell)
     {
         Cells.Add(coords, new Cell(cell));

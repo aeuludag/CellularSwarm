@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 
 namespace CellularSwarm.Core;
 
@@ -30,7 +31,7 @@ public class DiffusionHandler
             var cell = cellPair.Value;
             var morphogens = cell.Morphogens;
 
-            var neighbours = Simulation.GetNeighbours(coords);
+            var neighbours = Simulation.GetNeighboursNonAlloc(coords);
 
             foreach (var morphogenPair in morphogens)
             {
@@ -85,43 +86,6 @@ public class DiffusionHandler
         }
     }
 
-    public void DiffuseAllOf(HexCoords coords)
-    {
-        var morphogenDelta = new Dictionary<HexCoords, Dictionary<int, float>>();
-
-        var cell = Simulation.Cells[coords];
-        var neighbours = Simulation.GetNeighbours(coords);
-        var neighbourCount = neighbours.Count;
-
-        if (neighbourCount == 0) return;
-
-        foreach (var morphogenPair in cell.Morphogens)
-        {
-            var amount = morphogenPair.Value;
-            var shareAmount = amount / neighbourCount;
-
-            foreach (var neighbourCoords in neighbours)
-            {
-                AddMorphogenTo(morphogenDelta, neighbourCoords, morphogenPair.Key, shareAmount);
-            }
-        }
-
-        foreach (var morphogenPair in morphogenDelta)
-        {
-            var cellCoords = morphogenPair.Key;
-            var deltas = morphogenPair.Value;
-
-            foreach (var deltaPair in deltas)
-            {
-                var morphogenId = deltaPair.Key;
-                var delta = deltaPair.Value;
-
-                Simulation.Cells[cellCoords].SetMorphogen(morphogenId, Simulation.Cells[cellCoords].GetMorphogenAmount(morphogenId) + delta);
-            }
-        }
-
-    }
-
     void AddMorphogenTo(Dictionary<HexCoords, Dictionary<int, float>> delta, HexCoords coords, int id, float amount)
     {
         if (delta.ContainsKey(coords))
@@ -137,122 +101,49 @@ public class DiffusionHandler
             delta[coords].Add(id, amount);
         }
     }
-
-    // still not very familiar with parallel programming so I used the help of gpt a bit
-    public void DiffuseParallel()
+    
+    /*  I am sorry.
+    *   I am sorry for what I must have done.
+    *   From the very beginning of this project, I was strictly against using AI for the fun bits of simulation.
+    *   I did not want to leave the fun of implementing the logics to the AI.
+    *   I wanted to feel proud.
+    *   Proud of what I succesfully do.
+    *   But now, with this devils hand disguised as a memory exception,
+    *   the manifestation of hells anguish in this world,
+    *   I had no option left other than to use help of Gemini.
+    *   By help, I meant complete rewrite while not fully understanding it.
+    *   If someone were to come up and ask me to rewrite, I would not be able to.
+    *   With that, only non-parallel methods remain sanitized.
+    *   Lord forgive me for the sins I am commiting.
+    *   God forgive me.
+    *   -emir, 24th Aug 2026
+    */
+    public void DiffuseParallel(KeyValuePair<HexCoords, Cell>[] cellArray)
     {
-        var allLocalDeltas = new List<Dictionary<(HexCoords, int), float>>();
+        var allLocalDeltas = new System.Collections.Concurrent.ConcurrentQueue<Dictionary<(HexCoords, int), float>>();
 
-        Parallel.ForEach(Simulation.Cells, () => new Dictionary<(HexCoords, int), float>(),
-            (cellPair, state, localDelta) =>
+        ParallelChunker.Run(cellArray, (start, end) =>
+        {
+            for (int j = start; j < end; j++)
             {
-                var delta = DiffuseSingular(cellPair.Key);
-                // still dont know much about parallel methods. 
-                foreach (var kv in delta)
-                {
-                    if (localDelta.TryGetValue(kv.Key, out var existing))
-                        localDelta[kv.Key] = existing + kv.Value;
-                    else
-                        localDelta[kv.Key] = kv.Value;
-                }
-                return localDelta;
-            },
-            localDelta =>
-            {
-                lock (allLocalDeltas) { allLocalDeltas.Add(localDelta); }
-            });
+                var delta = DiffuseSingular(cellArray[j].Key);
+                allLocalDeltas.Enqueue(delta);
+            }
+        });
 
         var morphogenDelta = new Dictionary<(HexCoords, int), float>();
 
-        foreach (var localDelta in allLocalDeltas)
+        while (allLocalDeltas.TryDequeue(out var localDelta))
         {
-            foreach (((HexCoords coords, int morphogenId), float amount) in localDelta)
+            foreach (var kvp in localDelta)
             {
-                AddMorphogenTo(morphogenDelta, coords, morphogenId, amount);
+                AddMorphogenTo(morphogenDelta, kvp.Key.Item1, kvp.Key.Item2, kvp.Value);
             }
         }
 
-        foreach (((HexCoords coords, int morphogenId), float amount) in morphogenDelta)
+        foreach (var kvp in morphogenDelta)
         {
-            Simulation.Cells[coords].AddMorphogen(morphogenId, amount);
-        }
-    }
-
-    public void DiffuseCollectionParallel(List<HexCoords> cellsToDiffuse)
-    {
-        var allLocalDeltas = new List<Dictionary<(HexCoords, int), float>>();
-
-        Parallel.ForEach(cellsToDiffuse, () => new Dictionary<(HexCoords, int), float>(),
-            (coords, state, localDelta) =>
-            {
-                var delta = DiffuseSingular(coords);
-                // still dont know much about parallel methods. 
-                foreach (var kv in delta)
-                {
-                    if (localDelta.TryGetValue(kv.Key, out var existing))
-                        localDelta[kv.Key] = existing + kv.Value;
-                    else
-                        localDelta[kv.Key] = kv.Value;
-                }
-                return localDelta;
-            },
-            localDelta =>
-            {
-                lock (allLocalDeltas) { allLocalDeltas.Add(localDelta); }
-            });
-
-        var morphogenDelta = new Dictionary<(HexCoords, int), float>();
-
-        foreach (var localDelta in allLocalDeltas)
-        {
-            foreach (((HexCoords coords, int morphogenId), float amount) in localDelta)
-            {
-                AddMorphogenTo(morphogenDelta, coords, morphogenId, amount);
-            }
-        }
-
-        foreach (((HexCoords coords, int morphogenId), float amount) in morphogenDelta)
-        {
-            Simulation.Cells[coords].AddMorphogen(morphogenId, amount);
-        }
-    }
-
-    public void DiffuseAllOfCollectionParallel(List<HexCoords> cellsToDiffuse)
-    {
-        var allLocalDeltas = new List<Dictionary<(HexCoords, int), float>>();
-
-        Parallel.ForEach(cellsToDiffuse, () => new Dictionary<(HexCoords, int), float>(),
-            (coords, state, localDelta) =>
-            {
-                var delta = DiffuseAllOfSingular(coords);
-                // still dont know much about parallel methods. 
-                foreach (var kv in delta)
-                {
-                    if (localDelta.TryGetValue(kv.Key, out var existing))
-                        localDelta[kv.Key] = existing + kv.Value;
-                    else
-                        localDelta[kv.Key] = kv.Value;
-                }
-                return localDelta;
-            },
-            localDelta =>
-            {
-                lock (allLocalDeltas) { allLocalDeltas.Add(localDelta); }
-            });
-
-        var morphogenDelta = new Dictionary<(HexCoords, int), float>();
-
-        foreach (var localDelta in allLocalDeltas)
-        {
-            foreach (((HexCoords coords, int morphogenId), float amount) in localDelta)
-            {
-                AddMorphogenTo(morphogenDelta, coords, morphogenId, amount);
-            }
-        }
-
-        foreach (((HexCoords coords, int morphogenId), float amount) in morphogenDelta)
-        {
-            Simulation.Cells[coords].AddMorphogen(morphogenId, amount);
+            Simulation.Cells[kvp.Key.Item1].AddMorphogen(kvp.Key.Item2, kvp.Value);
         }
     }
 
@@ -261,7 +152,7 @@ public class DiffusionHandler
         var delta = new Dictionary<(HexCoords, int), float>();
 
         var cell = Simulation.Cells[coords];
-        var neighbours = Simulation.GetNeighbours(coords);
+        var neighbours = Simulation.GetNeighboursNonAlloc(coords);
         var neighbourCount = neighbours.Count;
 
         var morphogens = Simulation.Morphogens;
@@ -308,31 +199,6 @@ public class DiffusionHandler
         return delta;
     }
 
-    public Dictionary<(HexCoords, int), float> DiffuseAllOfSingular(HexCoords coords)
-    {
-        var delta = new Dictionary<(HexCoords, int), float>();
-
-        var cell = Simulation.Cells[coords];
-        var neighbours = Simulation.GetNeighbours(coords);
-        var neighbourCount = neighbours.Count;
-
-        if (neighbourCount == 0) return delta;
-
-        foreach ((int morphogenId, float amount) in cell.Morphogens)
-        {
-            var shareAmount = amount / neighbourCount;
-
-            foreach (var neighbourCoords in neighbours)
-            {
-                AddMorphogenTo(delta, neighbourCoords, morphogenId, shareAmount);
-            }
-
-            AddMorphogenTo(delta, coords, morphogenId, -amount);
-        }
-
-        return delta;
-    }
-
     public void ActiveTransportationCollection(List<HexCoords> cellsThatTransport)
     {
         var morphogenDelta = new Dictionary<(HexCoords, int), float>();
@@ -356,15 +222,19 @@ public class DiffusionHandler
         }
     }
 
-    public void ActiveTransportationCollectionParallel(List<HexCoords> cellsThatTransport)
+    public void ActiveTransportationCollectionParallel(HexCoords[] cellsThatTransport)
     {
-        var allLocalDeltas = new List<Dictionary<(HexCoords, int), float>>();
+        var allLocalDeltas = new System.Collections.Concurrent.ConcurrentQueue<Dictionary<(HexCoords, int), float>>();
 
-        Parallel.ForEach(cellsThatTransport, () => new Dictionary<(HexCoords, int), float>(),
-            (coords, state, localDelta) =>
+        ParallelChunker.Run(cellsThatTransport, (start, end) =>
+        {
+            var localDelta = new Dictionary<(HexCoords, int), float>();
+
+            for (int j = start; j < end; j++)
             {
+                var coords = cellsThatTransport[j];
                 var delta = ActiveTransportationSingular(coords);
-                // still dont know much about parallel methods. 
+                
                 foreach (var kv in delta)
                 {
                     if (localDelta.TryGetValue(kv.Key, out var existing))
@@ -372,35 +242,33 @@ public class DiffusionHandler
                     else
                         localDelta[kv.Key] = kv.Value;
                 }
-                return localDelta;
-            },
-            localDelta =>
-            {
-                lock (allLocalDeltas) { allLocalDeltas.Add(localDelta); }
-            });
+            }
+            
+            allLocalDeltas.Enqueue(localDelta);
+        });
 
         var morphogenDelta = new Dictionary<(HexCoords, int), float>();
 
-        foreach (var localDelta in allLocalDeltas)
+        while (allLocalDeltas.TryDequeue(out var localDelta))
         {
-            foreach (((HexCoords coords, int morphogenId), float amount) in localDelta)
+            foreach (var kvp in localDelta)
             {
-                AddMorphogenTo(morphogenDelta, coords, morphogenId, amount);
+                AddMorphogenTo(morphogenDelta, kvp.Key.Item1, kvp.Key.Item2, kvp.Value);
             }
         }
 
-        foreach (((HexCoords coords, int morphogenId), float amount) in morphogenDelta)
+        foreach (var kvp in morphogenDelta)
         {
-            Simulation.Cells[coords].AddMorphogen(morphogenId, amount);
+            Simulation.Cells[kvp.Key.Item1].AddMorphogen(kvp.Key.Item2, kvp.Value);
         }
     }
-
+    
     public Dictionary<(HexCoords, int), float> ActiveTransportationSingular(HexCoords coords)
     {
         var delta = new Dictionary<(HexCoords, int), float>();
 
         var cell = Simulation.Cells[coords];
-        var neighbours = Simulation.GetNeighbours(coords);
+        var neighbours = Simulation.GetNeighboursNonAlloc(coords);
         var neighbourCount = neighbours.Count;
 
         var morphogens = Simulation.Morphogens;

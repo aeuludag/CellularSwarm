@@ -1309,7 +1309,7 @@ public class Editor
             
             ImGui.SeparatorText("Simulations Path");
 
-            WidthX(ImGui.GetContentRegionAvail().X - FS(4, 4), () => ImGui.InputText("##simulationsPath", ref ConfigHandler.Config.simulationsPath, 512));
+            WidthX(ImGui.GetContentRegionAvail().X - FS(4, 8), () => ImGui.InputText("##simulationsPath", ref ConfigHandler.Config.simulationsPath, 512));
             
             ImGui.SameLine();
             if (ImGui.Button($"{FontAwesome6.ArrowRotateLeft}##reset"))
@@ -1396,7 +1396,7 @@ public class Editor
             ImGui.Text($"Welcome to Cellular Swarm!");
             ImGui.PopFont();
             ImGui.Text($"by Ahmet Emir Uludağ {FontAwesome6.FaceSmile}");
-            ImGui.TextDisabled($"Core v{Simulation.VERSION} - App v{SimulationRenderer.VERSION}\nLast updated 23rd Aug 2026");
+            ImGui.TextDisabled($"Core v{Simulation.VERSION} - App v{SimulationRenderer.VERSION}\nLast updated 25th Aug 2026");
             ImGui.EndChild();
             ImGui.PopStyleColor();
 

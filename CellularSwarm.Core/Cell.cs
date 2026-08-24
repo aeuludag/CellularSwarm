@@ -104,7 +104,7 @@ public class Cell
                 
                 foreach (var (id, rate) in action.actionMorphogens)
                 {
-                    _currentMultiplyActionMorphogens.Add(id, rate);
+                    _currentMultiplyActionMorphogens[id] = rate;
                 }
 
                 shouldMultiply = true;
@@ -121,7 +121,7 @@ public class Cell
 
                 foreach (var (id, bias) in action.actionMorphogens)
                 {
-                    _currentTransportMorphogenActionMorphogens.Add(id, bias);
+                    _currentTransportMorphogenActionMorphogens[id] = bias;
                 }
 
                 shouldTransport = true;

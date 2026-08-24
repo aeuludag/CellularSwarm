@@ -1,6 +1,6 @@
 namespace CellularSwarm.Core;
 
-public struct HexCoords
+public struct HexCoords : IEquatable<HexCoords>
 {
     public int q;
     public int r;
@@ -11,13 +11,13 @@ public struct HexCoords
         this.r = r;
     }
 
-    public static HexCoords[] offsets = [new HexCoords(0, -1), new HexCoords(-1, 0), new HexCoords(0, 1), new HexCoords(1, 0), new HexCoords(-1, 1), new HexCoords(1, -1)];
+    public static readonly HexCoords[] Offsets = [new HexCoords(0, -1), new HexCoords(-1, 0), new HexCoords(0, 1), new HexCoords(1, 0), new HexCoords(-1, 1), new HexCoords(1, -1)];
     public static HexCoords[] GetNeighbouringCoords(HexCoords hexCoords)
     {
         var coords = new HexCoords[6];
         for (int i = 0; i < 6; i++)
         {
-            coords[i] = hexCoords + offsets[i];
+            coords[i] = hexCoords + Offsets[i];
         }
         return coords;
     }
@@ -27,7 +27,7 @@ public struct HexCoords
         var coords = new HexCoords[6];
         for (int i = 0; i < 6; i++)
         {
-            coords[i] = this + offsets[i];
+            coords[i] = this + Offsets[i];
         }
         return coords;
     }
@@ -72,12 +72,12 @@ public struct HexCoords
         return (q, r).GetHashCode();
     }
 
+    public bool Equals(HexCoords other)
+    {
+        return q == other.q && r == other.r;
+    }
     public override bool Equals(object? obj)
     {
-        if (obj is HexCoords other)
-        {
-            return q == other.q && r == other.r;
-        }
-        return false;
+        return obj is HexCoords other && Equals(other);
     }
 }
